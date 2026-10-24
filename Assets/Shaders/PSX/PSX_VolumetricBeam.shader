@@ -78,10 +78,10 @@ Shader "PSX/PSX_VolumetricBeam"
 
                 // Soft rim falloff (view angle grazing)
                 float NdotV = abs(dot(normalWS, viewDir));
-                float edgeFade = pow(1.0 - NdotV, _FalloffPower);
+                float edgeFade = pow(saturate(1.0 - NdotV), _FalloffPower);
 
                 // Length fade: bright near the astronaut's helmet lens, fading into the void
-                float lengthFade = pow(1.0 - input.lengthFactor, _LengthFalloff);
+                float lengthFade = pow(saturate(1.0 - input.lengthFactor), _LengthFalloff);
 
                 // Subtle dust speckle/shimmer floating in the beam
                 float dust = sin(input.lengthFactor * 60.0 + _Time.y * 3.0) * cos(input.lengthFactor * 45.0 - _Time.y * 2.0);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using SpaceHorror.Player;
@@ -70,12 +71,29 @@ namespace SpaceHorror.Interaction
         [Tooltip("Target GameObject to toggle active/inactive (if TogglePowerOrDoor)")]
         [SerializeField] private GameObject targetObjectToToggle;
 
-        [Header("Visual Feedback & Highlighting")]
-        [Tooltip("Optional MeshRenderer to highlight/glow when aimed at")]
+        [Header("World-Space Prompt Anchor")]
+        [Tooltip("Optional custom transform where the floating text should anchor. If null, calculates top center of mesh/collider.")]
+        [SerializeField] private Transform promptAnchor;
+
+        [Tooltip("Offset in world units added to the prompt position")]
+        [SerializeField] private Vector3 promptOffset = new Vector3(0f, 0.40f, 0f);
+
+        [Header("Outer Silhouette Outline")]
+        [Tooltip("Thickness of the outer border outline in world units (e.g. 0.025 = 2.5cm)")]
+        [Range(0.005f, 0.08f)]
+        [SerializeField] private float outlineWidth = 0.025f;
+
+        [Tooltip("Color of the outer border outline")]
+        [SerializeField] private Color highlightColor = new Color(0.35f, 0.85f, 1.0f, 1.0f);
+
+        [Tooltip("Pulse the outline thickness gently as a breathing cue")]
+        [SerializeField] private bool pulseOutline = true;
+
+        [Tooltip("Optional MeshRenderer to outline. If null, gathers all renderers on this object/children.")]
         [SerializeField] private Renderer visualRenderer;
 
-        [Tooltip("Highlight emission color when player looks at this interactable")]
-        [SerializeField] private Color highlightColor = new Color(0.92f, 0.95f, 1.0f);
+        [Tooltip("Optional custom outline material. If null, automatically uses Resources/Materials/M_InteractableOutline.")]
+        [SerializeField] private Material customOutlineMaterial;
 
         [Header("Designer Callbacks (Unity Events)")]
         [Tooltip("Fires when the interaction successfully completes")]
@@ -86,9 +104,20 @@ namespace SpaceHorror.Interaction
 
         // Runtime states
         private bool isCompleted = false;
-        private Material originalMaterial;
-        private Color originalColor;
         private bool isHighlighted = false;
+        private Renderer[] targetRenderers;
+        private MaterialPropertyBlock propBlock;
+
+        private struct OutlineEntry
+        {
+            public GameObject outlineObj;
+            public Renderer outlineRend;
+        }
+
+        private readonly List<OutlineEntry> outlineEntries = new List<OutlineEntry>();
+        private static Material sharedOutlineMaterial;
+        private static readonly int PropOutlineColor = Shader.PropertyToID("_OutlineColor");
+        private static readonly int PropOutlineWidth = Shader.PropertyToID("_OutlineWidth");
 
         // Getters
         public string ObjectiveTitle => objectiveTitle;
@@ -103,46 +132,232 @@ namespace SpaceHorror.Interaction
         public string DataLogTranscript => dataLogTranscript;
         public AudioClip AudioLogClip => customAudioLogClip;
 
+        private static Material GetOrCreateOutlineMaterial()
+        {
+            if (sharedOutlineMaterial != null) return sharedOutlineMaterial;
+
+            // 1. Load pre-packaged Material asset from Resources (guaranteed to be included in Standalone Builds)
+            sharedOutlineMaterial = Resources.Load<Material>("Materials/M_InteractableOutline");
+            if (sharedOutlineMaterial != null) return sharedOutlineMaterial;
+
+            sharedOutlineMaterial = Resources.Load<Material>("M_InteractableOutline");
+            if (sharedOutlineMaterial != null) return sharedOutlineMaterial;
+
+            // 2. Try Shader.Find if in Editor or included in Always Included Shaders
+            Shader shader = Shader.Find("SpaceHorror/PSX_InteractableOutline");
+            if (shader != null)
+            {
+                sharedOutlineMaterial = new Material(shader);
+                sharedOutlineMaterial.name = "M_PSX_InteractableOutline";
+                return sharedOutlineMaterial;
+            }
+
+            // 3. Fallback to standard URP unlit shader if custom shader missing
+            Shader fallbackShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (fallbackShader != null)
+            {
+                sharedOutlineMaterial = new Material(fallbackShader);
+                sharedOutlineMaterial.name = "M_PSX_Outline_Fallback";
+                return sharedOutlineMaterial;
+            }
+
+            Debug.LogWarning("[MissionInteractable] Outline shader/material could not be located in build!");
+            return null;
+        }
+
         private void Awake()
         {
-            if (visualRenderer != null && visualRenderer.material != null)
+            propBlock = new MaterialPropertyBlock();
+
+            if (visualRenderer != null)
             {
-                originalMaterial = visualRenderer.material;
-                if (originalMaterial.HasProperty("_BaseColor"))
+                targetRenderers = new Renderer[] { visualRenderer };
+            }
+            else
+            {
+                targetRenderers = GetComponentsInChildren<Renderer>();
+            }
+
+            SetupOutlineShells();
+        }
+
+        private void SetupOutlineShells()
+        {
+            Material outlineMat = customOutlineMaterial != null ? customOutlineMaterial : GetOrCreateOutlineMaterial();
+            if (outlineMat == null || targetRenderers == null) return;
+
+            for (int i = 0; i < targetRenderers.Length; i++)
+            {
+                Renderer rend = targetRenderers[i];
+                if (rend == null) continue;
+
+                Mesh mesh = null;
+                MeshFilter mf = rend.GetComponent<MeshFilter>();
+                if (mf != null)
                 {
-                    originalColor = originalMaterial.GetColor("_BaseColor");
+                    mesh = mf.sharedMesh;
                 }
-                else if (originalMaterial.HasProperty("_Color"))
+
+                if (mesh == null) continue;
+
+                GameObject outlineObj = new GameObject("_Outline_Shell");
+                outlineObj.transform.SetParent(rend.transform, false);
+                outlineObj.transform.localPosition = Vector3.zero;
+                outlineObj.transform.localRotation = Quaternion.identity;
+                outlineObj.transform.localScale = Vector3.one;
+
+                MeshFilter outlineMf = outlineObj.AddComponent<MeshFilter>();
+                outlineMf.sharedMesh = mesh;
+
+                MeshRenderer outlineRend = outlineObj.AddComponent<MeshRenderer>();
+
+                // Ensure all submeshes receive the outline material
+                int subMeshCount = mesh.subMeshCount;
+                if (subMeshCount > 1)
                 {
-                    originalColor = originalMaterial.GetColor("_Color");
+                    Material[] mats = new Material[subMeshCount];
+                    for (int m = 0; m < subMeshCount; m++) mats[m] = outlineMat;
+                    outlineRend.sharedMaterials = mats;
                 }
+                else
+                {
+                    outlineRend.sharedMaterial = outlineMat;
+                }
+
+                outlineRend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                outlineRend.receiveShadows = false;
+
+                outlineObj.SetActive(false);
+
+                outlineEntries.Add(new OutlineEntry
+                {
+                    outlineObj = outlineObj,
+                    outlineRend = outlineRend
+                });
+            }
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < outlineEntries.Count; i++)
+            {
+                if (outlineEntries[i].outlineObj != null)
+                {
+                    Destroy(outlineEntries[i].outlineObj);
+                }
+            }
+            outlineEntries.Clear();
+        }
+
+        private void Update()
+        {
+            if (!CanInteract && isHighlighted)
+            {
+                SetHighlight(false);
+                return;
+            }
+
+            if (isHighlighted && CanInteract && pulseOutline)
+            {
+                // Soft breathing / pulsing edge width
+                float pulse = (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f; // 0.0 to 1.0
+                float currentWidth = Mathf.Lerp(outlineWidth * 0.85f, outlineWidth * 1.25f, pulse);
+                UpdateOutlineProperties(currentWidth);
             }
         }
 
         /// <summary>
-        /// Highlights or unhighlights the target object when player reticle is looking at it.
+        /// Calculates the optimal floating position in 3D world space for the prompt,
+        /// dynamically adapting in real time to the player's camera position and zero-g orientation.
+        /// Finds the outer surface point facing the astronaut, keeping the prompt cleanly on the visible side.
+        /// </summary>
+        public Vector3 GetPromptWorldPosition(Vector3 cameraPosition, Vector3 cameraUp)
+        {
+            if (promptAnchor != null)
+            {
+                Vector3 toCamFromAnchor = (cameraPosition - promptAnchor.position).normalized;
+                return promptAnchor.position + (cameraUp * promptOffset.y) + (toCamFromAnchor * 0.08f);
+            }
+
+            Collider col = GetComponentInChildren<Collider>();
+            if (col != null)
+            {
+                // Real-time outer surface point closest to player camera
+                Vector3 closestPoint = col.ClosestPoint(cameraPosition);
+                Vector3 toCam = (cameraPosition - closestPoint).normalized;
+
+                float verticalDist = promptOffset.y > 0.01f ? promptOffset.y : 0.35f;
+                float forwardDist = 0.10f; // slight hover towards player to prevent z-fighting
+
+                return closestPoint + (cameraUp * verticalDist) + (toCam * forwardDist);
+            }
+
+            Renderer rend = visualRenderer != null ? visualRenderer : GetComponentInChildren<Renderer>();
+            if (rend != null)
+            {
+                Vector3 center = rend.bounds.center;
+                Vector3 dirToCam = (cameraPosition - center).normalized;
+                float radius = rend.bounds.extents.magnitude * 0.45f;
+                Vector3 surfaceApprox = center + dirToCam * radius;
+
+                float verticalDist = promptOffset.y > 0.01f ? promptOffset.y : 0.35f;
+                return surfaceApprox + (cameraUp * verticalDist) + (dirToCam * 0.10f);
+            }
+
+            return transform.position + promptOffset;
+        }
+
+        public Vector3 GetPromptWorldPosition()
+        {
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                return GetPromptWorldPosition(cam.transform.position, cam.transform.up);
+            }
+            return transform.position + promptOffset;
+        }
+
+        /// <summary>
+        /// Highlights or unhighlights the outer border outline when reticle aims at it.
+        /// Never highlights if the interactable is single-use and already completed.
         /// </summary>
         public void SetHighlight(bool active)
         {
-            if (isHighlighted == active || isCompleted && isSingleUse) return;
+            if (active && !CanInteract)
+            {
+                active = false;
+            }
+
+            if (isHighlighted == active) return;
             isHighlighted = active;
 
-            if (visualRenderer == null || visualRenderer.material == null) return;
+            for (int i = 0; i < outlineEntries.Count; i++)
+            {
+                if (outlineEntries[i].outlineObj != null)
+                {
+                    outlineEntries[i].outlineObj.SetActive(active);
+                }
+            }
 
             if (active)
             {
-                if (visualRenderer.material.HasProperty("_EmissionColor"))
-                {
-                    visualRenderer.material.EnableKeyword("_EMISSION");
-                    visualRenderer.material.SetColor("_EmissionColor", highlightColor * 1.5f);
-                }
+                UpdateOutlineProperties(outlineWidth);
             }
-            else
+        }
+
+        private void UpdateOutlineProperties(float width)
+        {
+            if (propBlock == null) propBlock = new MaterialPropertyBlock();
+
+            for (int i = 0; i < outlineEntries.Count; i++)
             {
-                if (visualRenderer.material.HasProperty("_EmissionColor"))
-                {
-                    visualRenderer.material.SetColor("_EmissionColor", Color.black);
-                }
+                Renderer rend = outlineEntries[i].outlineRend;
+                if (rend == null) continue;
+
+                rend.GetPropertyBlock(propBlock);
+                propBlock.SetColor(PropOutlineColor, highlightColor);
+                propBlock.SetFloat(PropOutlineWidth, width);
+                rend.SetPropertyBlock(propBlock);
             }
         }
 

@@ -410,16 +410,28 @@ namespace SpaceHorror.UI
 
         private void UpdateInteractionTimers()
         {
-            if (interactionStatusGroup != null && statusMessageTimer > 0f)
+            if (interactionStatusGroup != null)
             {
-                statusMessageTimer -= Time.deltaTime;
-                interactionStatusGroup.alpha = Mathf.MoveTowards(interactionStatusGroup.alpha, statusMessageTimer > 0f ? 1f : 0f, Time.deltaTime * 3f);
+                if (statusMessageTimer > 0f)
+                {
+                    statusMessageTimer -= Time.deltaTime;
+                }
+                else if (interactionStatusGroup.alpha > 0f)
+                {
+                    interactionStatusGroup.alpha = Mathf.MoveTowards(interactionStatusGroup.alpha, 0f, Time.deltaTime * 3f);
+                }
             }
 
-            if (transmissionLogGroup != null && transmissionTimer > 0f)
+            if (transmissionLogGroup != null)
             {
-                transmissionTimer -= Time.deltaTime;
-                transmissionLogGroup.alpha = Mathf.MoveTowards(transmissionLogGroup.alpha, transmissionTimer > 0f ? 1f : 0f, Time.deltaTime * 2f);
+                if (transmissionTimer > 0f)
+                {
+                    transmissionTimer -= Time.deltaTime;
+                }
+                else if (transmissionLogGroup.alpha > 0f)
+                {
+                    transmissionLogGroup.alpha = Mathf.MoveTowards(transmissionLogGroup.alpha, 0f, Time.deltaTime * 2f);
+                }
             }
         }
 

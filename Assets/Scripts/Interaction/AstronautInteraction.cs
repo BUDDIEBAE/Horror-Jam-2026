@@ -35,6 +35,7 @@ namespace SpaceHorror.Interaction
         private Camera playerCamera;
         private AstronautInputHandler inputHandler;
         private AstronautHelmetHUD helmetHUD;
+        private WorldSpaceInteractPrompt worldPrompt;
         private AudioSource interactionAudioSource;
 
         // Runtime Target Tracking
@@ -57,6 +58,12 @@ namespace SpaceHorror.Interaction
 
             helmetHUD = GetComponentInChildren<AstronautHelmetHUD>();
             if (helmetHUD == null) helmetHUD = UnityEngine.Object.FindFirstObjectByType<AstronautHelmetHUD>();
+
+            worldPrompt = UnityEngine.Object.FindFirstObjectByType<WorldSpaceInteractPrompt>();
+            if (worldPrompt == null)
+            {
+                worldPrompt = WorldSpaceInteractPrompt.CreateDefault();
+            }
 
             SetupAudioSource();
         }
@@ -96,7 +103,11 @@ namespace SpaceHorror.Interaction
             // SphereCast gives smooth, forgiving zero-g raycasting
             if (Physics.SphereCast(ray, sphereCastRadius, out hit, reachDistance, interactionLayers, QueryTriggerInteraction.Collide))
             {
-                detected = hit.collider.GetComponentInParent<MissionInteractable>();
+                var candidate = hit.collider.GetComponentInParent<MissionInteractable>();
+                if (candidate != null && candidate.CanInteract)
+                {
+                    detected = candidate;
+                }
             }
 
             // Target changed
@@ -131,26 +142,35 @@ namespace SpaceHorror.Interaction
 
         private void UpdateHUDDisplay(bool hasValidTarget)
         {
-            if (helmetHUD == null)
+            if (worldPrompt == null)
             {
-                helmetHUD = UnityEngine.Object.FindFirstObjectByType<AstronautHelmetHUD>();
-                if (helmetHUD == null) return;
+                worldPrompt = UnityEngine.Object.FindFirstObjectByType<WorldSpaceInteractPrompt>();
+                if (worldPrompt == null)
+                {
+                    worldPrompt = WorldSpaceInteractPrompt.CreateDefault();
+                }
             }
 
-            if (hasValidTarget)
+            // Ensure the old screen box is kept hidden
+            if (helmetHUD != null)
             {
-                float progress = currentTarget.Method == InteractionMethod.HoldToComplete ? CurrentHoldProgress : 0f;
-                string prompt = currentTarget.ActionPrompt;
-                if (currentTarget.Method == InteractionMethod.HoldToComplete)
-                {
-                    prompt = $"{prompt} (HOLD)";
-                }
+                helmetHUD.HideInteractionPrompt();
+            }
 
-                helmetHUD.ShowInteractionPrompt("LMB", prompt, progress, currentTarget.ObjectiveTitle);
+            if (hasValidTarget && currentTarget != null)
+            {
+                bool isHold = currentTarget.Method == InteractionMethod.HoldToComplete;
+                float progress = isHold ? CurrentHoldProgress : 0f;
+                Vector3 promptPos = currentTarget.GetPromptWorldPosition(playerCamera.transform.position, playerCamera.transform.up);
+
+                worldPrompt.Show(promptPos, currentTarget.transform, "LMB", currentTarget.ActionPrompt, currentTarget.ObjectiveTitle, progress, isHold);
             }
             else
             {
-                helmetHUD.HideInteractionPrompt();
+                if (worldPrompt != null)
+                {
+                    worldPrompt.Hide();
+                }
             }
         }
 
@@ -204,6 +224,13 @@ namespace SpaceHorror.Interaction
 
             MissionInteractable target = currentTarget;
             target.TriggerInteraction(gameObject);
+
+            if (!target.CanInteract)
+            {
+                target.SetHighlight(false);
+                if (worldPrompt != null) worldPrompt.Hide();
+                currentTarget = null;
+            }
 
             // Play completion sound
             PlayCompletionAudio();

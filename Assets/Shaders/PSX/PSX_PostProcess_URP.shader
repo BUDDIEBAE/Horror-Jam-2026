@@ -93,10 +93,10 @@ Shader "PSX/PSX_PostProcess_URP"
                 // 2. Bayer 4x4 Dithering & Color Banding (15-bit RGB quantization)
                 if (_EnableDithering > 0.5)
                 {
-                    // Safe modulo 4
-                    int ditherX = abs(ditherPixel.x) % 4;
-                    int ditherY = abs(ditherPixel.y) % 4;
-                    int ditherOffset = ps1DitherMatrix[ditherX + ditherY * 4];
+                    // Safe modulo 4 using fast uint bitwise operation
+                    uint ditherX = (uint)abs(ditherPixel.x) & 3u;
+                    uint ditherY = (uint)abs(ditherPixel.y) & 3u;
+                    int ditherOffset = ps1DitherMatrix[ditherX + ditherY * 4u];
 
                     float depth = max(_ColorDepth, 2.0);
                     float stepSize = 1.0 / (depth - 1.0);
@@ -112,7 +112,7 @@ Shader "PSX/PSX_PostProcess_URP"
                 if (_EnableInterlacing > 0.5)
                 {
                     int lineIndex = (int)floor(screenPixel.y / max(_InterlacingScale, 1.0));
-                    if ((abs(lineIndex) % 2) == 0)
+                    if (((uint)abs(lineIndex) & 1u) == 0u)
                     {
                         color.rgb *= (1.0 - _InterlacingIntensity);
                     }
