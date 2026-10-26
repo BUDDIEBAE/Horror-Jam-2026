@@ -111,6 +111,18 @@ namespace SpaceHorror.Player
             UpdateShake();
         }
 
+        [Header("Cinematic & External Overrides")]
+        private Vector3 externalEulerOffset = Vector3.zero;
+
+        /// <summary>
+        /// Sets an external rotational offset (e.g. for waking-up chin drop or cutscenes).
+        /// Blends smoothly with dynamic tilts and trauma shake.
+        /// </summary>
+        public void SetExternalEulerOffset(Vector3 offset)
+        {
+            externalEulerOffset = offset;
+        }
+
         private void UpdateDynamicTiltAndBreathing()
         {
             // Calculate local velocity to determine strafe/heave/forward forces
@@ -142,11 +154,12 @@ namespace SpaceHorror.Player
                 1f / positionTrackingSpeed
             );
 
-            // 4. Combine Rotations (Initial + Dynamic Tilts + Shake)
+            // 4. Combine Rotations (Initial + Dynamic Tilts + Shake + External Offset)
             Quaternion dynamicTilt = Quaternion.Euler(targetPitch, 0f, targetRoll);
             Quaternion shakeRot = GetShakeRotation();
+            Quaternion externalRot = Quaternion.Euler(externalEulerOffset);
 
-            Quaternion targetLocalRot = initialLocalRot * dynamicTilt * shakeRot;
+            Quaternion targetLocalRot = initialLocalRot * dynamicTilt * shakeRot * externalRot;
             cameraTransform.localRotation = Quaternion.Slerp(
                 cameraTransform.localRotation,
                 targetLocalRot,

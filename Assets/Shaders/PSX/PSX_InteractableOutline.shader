@@ -29,6 +29,7 @@ Shader "SpaceHorror/PSX_InteractableOutline"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -41,6 +42,7 @@ Shader "SpaceHorror/PSX_InteractableOutline"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float fogFactor   : TEXCOORD0;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -75,12 +77,14 @@ Shader "SpaceHorror/PSX_InteractableOutline"
                 }
 
                 output.positionCS = posCS;
+                output.fogFactor = ComputeFogFactor(posCS.z);
                 return output;
             }
 
             float4 frag(Varyings input) : SV_Target
             {
-                return _OutlineColor;
+                float3 col = MixFog(_OutlineColor.rgb, input.fogFactor);
+                return float4(col, _OutlineColor.a);
             }
             ENDHLSL
         }

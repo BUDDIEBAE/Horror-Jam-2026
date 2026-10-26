@@ -29,6 +29,7 @@ Shader "PSX/PSX_VolumetricBeam"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -45,6 +46,7 @@ Shader "PSX/PSX_VolumetricBeam"
                 float3 viewDirWS  : TEXCOORD0;
                 float3 normalWS   : NORMAL;
                 float lengthFactor: TEXCOORD1;
+                float fogFactor   : TEXCOORD2;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -67,6 +69,7 @@ Shader "PSX/PSX_VolumetricBeam"
                 // Cone apex is at local Z=0, base is at local Z=1 (or Y depending on mesh)
                 // Normalize length factor
                 output.lengthFactor = saturate(input.positionOS.z / 25.0);
+                output.fogFactor = ComputeFogFactor(posInputs.positionCS.z);
 
                 return output;
             }
@@ -87,7 +90,8 @@ Shader "PSX/PSX_VolumetricBeam"
                 float dust = sin(input.lengthFactor * 60.0 + _Time.y * 3.0) * cos(input.lengthFactor * 45.0 - _Time.y * 2.0);
                 float dustMotes = 1.0 + (dust * _DustIntensity);
 
-                float alpha = edgeFade * lengthFade * _BeamColor.a * dustMotes;
+                // Dissolve beam into deep space fog at distance
+                float alpha = edgeFade * lengthFade * _BeamColor.a * dustMotes * saturate(input.fogFactor);
 
                 return float4(_BeamColor.rgb * alpha, alpha);
             }

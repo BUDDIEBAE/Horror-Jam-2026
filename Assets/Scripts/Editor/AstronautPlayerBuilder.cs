@@ -8,6 +8,7 @@ using SpaceHorror.Rendering;
 using SpaceHorror.UI;
 using SpaceHorror.Audio;
 using SpaceHorror.Interaction;
+using SpaceHorror.Gameplay;
 using UnityEngine.UI;
 using TMPro;
 
@@ -62,6 +63,9 @@ namespace SpaceHorror.Editor
             AstronautSurvival survival = player.AddComponent<AstronautSurvival>();
             AstronautAudioSystem audioSystem = player.AddComponent<AstronautAudioSystem>();
             AstronautInteraction interaction = player.AddComponent<AstronautInteraction>();
+            AstronautSignalTracker signalTracker = player.AddComponent<AstronautSignalTracker>();
+            AstronautSignalAudio signalAudio = player.AddComponent<AstronautSignalAudio>();
+            AstronautWakeUpTransition wakeUpTransition = player.AddComponent<AstronautWakeUpTransition>();
 
             // 5. Create Camera Mount & First Person Camera
             GameObject cameraObj = new GameObject("PlayerCamera");
@@ -113,9 +117,53 @@ namespace SpaceHorror.Editor
             // 7. Setup Helmet Visor HUD
             SetupVisorHUDInternal(player, cam);
 
-            // 8. Select newly created player
+            // 8. Attach Zero-G Space Dust Particles
+            AttachSpaceDustInternal(player, cameraObj.transform);
+
+            // 9. Select newly created player
             Selection.activeGameObject = player;
             Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> 6DoF Astronaut Player successfully generated in scene!");
+        }
+
+        [MenuItem("Tools/Space Horror/1. Astronaut & Survival/Attach Zero-G Space Dust Particles", false, 6)]
+        public static void AttachSpaceDustMenu()
+        {
+            GameObject player = GameObject.Find("Astronaut_Player_6DoF");
+            if (player == null)
+            {
+                var movement = Object.FindFirstObjectByType<AstronautMovement6D>();
+                if (movement != null) player = movement.gameObject;
+            }
+
+            if (player == null)
+            {
+                Debug.LogWarning("[Space Horror] Could not find Astronaut Player in the scene.");
+                return;
+            }
+
+            Camera cam = player.GetComponentInChildren<Camera>();
+            Transform target = cam != null ? cam.transform : player.transform;
+            AttachSpaceDustInternal(player, target);
+        }
+
+        public static void AttachSpaceDustInternal(GameObject player, Transform target)
+        {
+            SpaceDustParticles dust = player.GetComponentInChildren<SpaceDustParticles>();
+            if (dust == null)
+            {
+                GameObject dustObj = new GameObject("SpaceDust_Particulates");
+                dustObj.transform.SetParent(player.transform);
+                dustObj.transform.position = target.position;
+                dust = dustObj.AddComponent<SpaceDustParticles>();
+                dust.Initialize(target);
+                Undo.RegisterCreatedObjectUndo(dustObj, "Attach Space Dust Particles");
+                Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> Zero-G Space Dust Particulates attached to Player!");
+            }
+            else
+            {
+                dust.SetupParticleSystem();
+                Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> SpaceDustParticles refreshed.");
+            }
         }
 
         [MenuItem("Tools/Space Horror/1. Astronaut & Survival/Attach Survival System (O2 & Heartbeat)", false, 2)]
@@ -225,6 +273,88 @@ namespace SpaceHorror.Editor
             Selection.activeGameObject = player;
         }
 
+        [MenuItem("Tools/Space Horror/1. Astronaut & Survival/Attach Wake-Up Transition (Opening Eyes)", false, 7)]
+        public static void AttachWakeUpTransition()
+        {
+            GameObject player = GameObject.Find("Astronaut_Player_6DoF");
+            if (player == null)
+            {
+                var movement = Object.FindFirstObjectByType<AstronautMovement6D>();
+                if (movement != null) player = movement.gameObject;
+            }
+
+            if (player == null)
+            {
+                Debug.LogWarning("[Space Horror] Could not find Astronaut Player in the scene!");
+                return;
+            }
+
+            AstronautWakeUpTransition transition = player.GetComponent<AstronautWakeUpTransition>();
+            if (transition == null)
+            {
+                transition = Undo.AddComponent<AstronautWakeUpTransition>(player);
+                Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> AstronautWakeUpTransition attached to Player!");
+            }
+            else
+            {
+                Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> AstronautWakeUpTransition already exists on Player.");
+            }
+
+            Selection.activeGameObject = player;
+        }
+
+        [MenuItem("Tools/Space Horror/5. Game Loop & Missions/Setup Daily Expedition System (Ship Terminal & Airlock)", false, 1)]
+        public static void SetupDailyExpeditionSystem()
+        {
+            // 1. Find or create Day_Cycle_Director
+            GameObject directorObj = GameObject.Find("Day_Cycle_Director");
+            if (directorObj == null)
+            {
+                directorObj = new GameObject("Day_Cycle_Director");
+                Undo.RegisterCreatedObjectUndo(directorObj, "Create Day Cycle Director");
+            }
+
+            DayCycleManager cycleManager = directorObj.GetComponent<DayCycleManager>();
+            if (cycleManager == null)
+            {
+                cycleManager = Undo.AddComponent<DayCycleManager>(directorObj);
+            }
+
+            // 2. Find or configure Ship
+            GameObject ship = GameObject.Find("Ship");
+            if (ship == null)
+            {
+                var airlock = Object.FindFirstObjectByType<ShipReturnAirlock>();
+                if (airlock != null) ship = airlock.gameObject;
+            }
+
+            if (ship != null)
+            {
+                // Ensure Ship has MissionInteractable & ShipMissionTerminal
+                ShipMissionTerminal terminal = ship.GetComponent<ShipMissionTerminal>();
+                if (terminal == null)
+                {
+                    terminal = Undo.AddComponent<ShipMissionTerminal>(ship);
+                }
+
+                // Ensure Ship has ShipReturnAirlock
+                ShipReturnAirlock returnAirlock = ship.GetComponent<ShipReturnAirlock>();
+                if (returnAirlock == null)
+                {
+                    returnAirlock = Undo.AddComponent<ShipReturnAirlock>(ship);
+                }
+
+                Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> Configured Ship with Mission Terminal & Return Airlock (121.5 MHz)!");
+            }
+            else
+            {
+                Debug.LogWarning("[Space Horror] No 'Ship' GameObject found in scene. Created DayCycleManager only.");
+            }
+
+            Selection.activeGameObject = directorObj;
+            Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> Daily Expedition Loop successfully initialized!");
+        }
+
         [MenuItem("Tools/Space Horror/1. Astronaut & Survival/Setup Helmet Visor HUD (Crisp Overlay)", false, 3)]
         public static void SetupVisorHUD()
         {
@@ -304,15 +434,15 @@ namespace SpaceHorror.Editor
             Image visorFrameImg = CreateImage(canvasObj.transform, "Visor_Curved_Frame", vignetteSprite,
                 Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.01f, 0.015f, 0.02f, 0.40f));
 
-            // 7. Top Telemetry Pod (RCS & Lamp)
+            // 7. Tools Telemetry Pod (RCS & Lamp) - Positioned in Top-Right corner to leave Center-Top clear for Signal Tracker
             GameObject topGroup = new GameObject("Top_Telemetry_Panel");
             topGroup.transform.SetParent(canvasObj.transform, false);
             RectTransform topRect = topGroup.AddComponent<RectTransform>();
-            topRect.anchorMin = new Vector2(0.5f, 1f);
-            topRect.anchorMax = new Vector2(0.5f, 1f);
-            topRect.pivot = new Vector2(0.5f, 1f);
-            topRect.anchoredPosition = new Vector2(0f, -30f);
-            topRect.sizeDelta = new Vector2(440f, 44f);
+            topRect.anchorMin = new Vector2(1f, 1f);
+            topRect.anchorMax = new Vector2(1f, 1f);
+            topRect.pivot = new Vector2(1f, 1f);
+            topRect.anchoredPosition = new Vector2(-45f, -22f);
+            topRect.sizeDelta = new Vector2(320f, 38f);
 
             // Dark Film Noir obsidian backing pod
             CreateImage(topGroup.transform, "Top_BG", flatWhiteSprite,
@@ -320,14 +450,14 @@ namespace SpaceHorror.Editor
 
             // Silver center divider
             CreateImage(topGroup.transform, "Top_Divider", flatWhiteSprite,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(2f, -14f), new Color(0.6f, 0.65f, 0.7f, 0.4f));
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(2f, -10f), new Color(0.6f, 0.65f, 0.7f, 0.4f));
 
             TMP_Text rcsText = CreateTMPText(topGroup.transform, "RCS_Status_Text", "RCS: STABILIZED",
-                new Vector2(0.5f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-20f, 0f), new Vector2(185f, 26f), 16f,
+                new Vector2(0.5f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-15f, 0f), new Vector2(140f, 24f), 14f,
                 TextAlignmentOptions.Right, new Color(0.92f, 0.94f, 0.96f, 0.95f));
 
             TMP_Text lampText = CreateTMPText(topGroup.transform, "Lamp_Status_Text", "LAMP: ON",
-                new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 0f), new Vector2(185f, 26f), 16f,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(15f, 0f), new Vector2(140f, 24f), 14f,
                 TextAlignmentOptions.Left, new Color(1f, 1f, 1f, 0.95f));
 
             // 8. Bottom-Left Life Support Pod (Oxygen Bar & Suit Status)
@@ -527,10 +657,16 @@ namespace SpaceHorror.Editor
                 transBodyText
             );
 
+            // 15. Create Signal Tracker HUD Widget (Monochrome Noir)
+            GameObject signalHudObj = new GameObject("Signal_Tracker_HUD");
+            signalHudObj.transform.SetParent(canvasObj.transform, false);
+            AstronautSignalHUD signalHUD = signalHudObj.AddComponent<AstronautSignalHUD>();
+            signalHUD.BuildProceduralWidget();
+
             hud.Initialize(survival, movement, flashlight);
             Selection.activeGameObject = canvasObj;
 
-            Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> Crisp Sci-Fi Helmet Visor HUD with Interaction Telemetry successfully created!");
+            Debug.Log("<color=#E2E8F0><b>[Space Horror]</b></color> Crisp Film Noir Helmet Visor HUD with Signal Tracker Telemetry successfully created!");
             return canvasObj;
         }
 
@@ -860,7 +996,32 @@ namespace SpaceHorror.Editor
                 dirLight.color = new Color(0.6f, 0.7f, 0.9f);
             }
 
-            Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> Deep Space Lighting & Skybox successfully applied!");
+            // 4. Apply Deep Space Atmospheric Fog
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = 7f;
+            RenderSettings.fogEndDistance = 38f;
+            RenderSettings.fogColor = new Color(0.003f, 0.005f, 0.009f, 1f);
+
+            Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> Deep Space Lighting, Skybox & Atmospheric Fog successfully applied!");
+        }
+
+        [MenuItem("Tools/Space Horror/3. Environment & Space/Enable Deep Space Atmospheric Fog (8-38m)", false, 26)]
+        public static void EnableDeepSpaceFog()
+        {
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = 7f;
+            RenderSettings.fogEndDistance = 38f;
+            RenderSettings.fogColor = new Color(0.003f, 0.005f, 0.009f, 1f);
+
+            PSXManager psx = Object.FindFirstObjectByType<PSXManager>();
+            if (psx != null)
+            {
+                psx.ApplyActiveSettings();
+            }
+
+            Debug.Log("<color=#00FF99><b>[Space Horror]</b></color> Deep Space Atmospheric Fog enabled (Linear 7m - 38m)!");
         }
 
         [MenuItem("Tools/Space Horror/2. PSX Retro & Graphics/Apply Film Noir Volume Profile", false, 14)]
@@ -1258,6 +1419,67 @@ namespace SpaceHorror.Editor
             mesh.RecalculateBounds();
             return mesh;
         }
+
+        #region Signal Beacon Helpers
+
+        [MenuItem("Tools/Space Horror/4. Interaction & Signals/Add Signal Beacon (142.8 MHz - Objective)", false, 20)]
+        [MenuItem("GameObject/Space Horror/Add Signal Beacon (142.8 MHz - Objective)", false, 20)]
+        public static void AddObjectiveSignalBeacon()
+        {
+            if (Selection.activeGameObject == null)
+            {
+                EditorUtility.DisplayDialog("Space Horror", "Please select a GameObject in the scene first.", "OK");
+                return;
+            }
+
+            GameObject target = Selection.activeGameObject;
+            SignalBeacon beacon = target.GetComponent<SignalBeacon>();
+            if (beacon == null) beacon = Undo.AddComponent<SignalBeacon>(target);
+
+            beacon.Configure(SignalChannelPreset.MissionObjective, 75f);
+            EditorUtility.SetDirty(target);
+            Debug.Log($"<color=#E2E8F0><b>[Space Horror]</b></color> Attached Mission Signal Beacon to {target.name} (142.8 MHz)");
+        }
+
+        [MenuItem("Tools/Space Horror/4. Interaction & Signals/Add Signal Beacon (121.5 MHz - Airlock & Spawn)", false, 21)]
+        [MenuItem("GameObject/Space Horror/Add Signal Beacon (121.5 MHz - Airlock & Spawn)", false, 21)]
+        public static void AddSpawnSignalBeacon()
+        {
+            if (Selection.activeGameObject == null)
+            {
+                EditorUtility.DisplayDialog("Space Horror", "Please select a GameObject in the scene first.", "OK");
+                return;
+            }
+
+            GameObject target = Selection.activeGameObject;
+            SignalBeacon beacon = target.GetComponent<SignalBeacon>();
+            if (beacon == null) beacon = Undo.AddComponent<SignalBeacon>(target);
+
+            beacon.Configure(SignalChannelPreset.AirlockHome, 95f);
+            EditorUtility.SetDirty(target);
+            Debug.Log($"<color=#E2E8F0><b>[Space Horror]</b></color> Attached Home Airlock Signal Beacon to {target.name} (121.5 MHz)");
+        }
+
+        [MenuItem("Tools/Space Horror/4. Interaction & Signals/Add Signal Beacon (156.8 MHz - O2 Station)", false, 22)]
+        [MenuItem("GameObject/Space Horror/Add Signal Beacon (156.8 MHz - O2 Station)", false, 22)]
+        public static void AddOxygenSignalBeacon()
+        {
+            if (Selection.activeGameObject == null)
+            {
+                EditorUtility.DisplayDialog("Space Horror", "Please select a GameObject in the scene first.", "OK");
+                return;
+            }
+
+            GameObject target = Selection.activeGameObject;
+            SignalBeacon beacon = target.GetComponent<SignalBeacon>();
+            if (beacon == null) beacon = Undo.AddComponent<SignalBeacon>(target);
+
+            beacon.Configure(SignalChannelPreset.OxygenStation, 60f);
+            EditorUtility.SetDirty(target);
+            Debug.Log($"<color=#E2E8F0><b>[Space Horror]</b></color> Attached O2 Station Signal Beacon to {target.name} (156.8 MHz)");
+        }
+
+        #endregion
     }
 }
 #endif

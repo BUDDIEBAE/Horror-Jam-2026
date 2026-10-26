@@ -154,6 +154,7 @@ Shader "PSX/PSX_Lit_URP"
 
                 // Native URP Blinn-Phong lighting: handles Directional sun, Spotlights, Forward, Forward+, shadows
                 float4 finalColor = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                finalColor.rgb = MixFog(finalColor.rgb, inputData.fogCoord);
                 return finalColor;
             }
             ENDHLSL

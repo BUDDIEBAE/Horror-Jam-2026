@@ -55,6 +55,27 @@ namespace SpaceHorror.Rendering
         [Range(1f, 4f)]
         [SerializeField] private float interlacingScale = 1.0f;
 
+        [Header("Atmospheric Deep Space Fog")]
+        [Tooltip("Enable atmospheric depth fog to emulate authentic PS1 draw-distance horror")]
+        [SerializeField] private bool enableFog = true;
+
+        [Tooltip("Color of the space fog. Deep black/cold blue recommended to match space void")]
+        [SerializeField] private Color fogColor = new Color(0.003f, 0.005f, 0.009f, 1f);
+
+        [SerializeField] private FogMode fogMode = FogMode.Linear;
+
+        [Tooltip("Distance in meters where objects begin to fade into fog")]
+        [Range(1f, 30f)]
+        [SerializeField] private float fogStartDistance = 7f;
+
+        [Tooltip("Distance in meters where objects become completely shrouded in darkness")]
+        [Range(15f, 100f)]
+        [SerializeField] private float fogEndDistance = 38f;
+
+        [Tooltip("Exponential fog density (only used if FogMode is Exponential/Exp2)")]
+        [Range(0.001f, 0.15f)]
+        [SerializeField] private float fogDensity = 0.035f;
+
         private PSXPreset previousPreset;
 
         private void OnEnable()
@@ -107,6 +128,11 @@ namespace SpaceHorror.Rendering
                     enableInterlacing = true;
                     interlacingIntensity = 0.16f;
                     interlacingScale = 1.0f;
+                    enableFog = true;
+                    fogColor = new Color(0.005f, 0.008f, 0.015f, 1f);
+                    fogMode = FogMode.Linear;
+                    fogStartDistance = 5f;
+                    fogEndDistance = 30f;
                     break;
 
                 case PSXPreset.FilmNoirSpaceHorror:
@@ -121,6 +147,11 @@ namespace SpaceHorror.Rendering
                     enableInterlacing = true;
                     interlacingIntensity = 0.12f;
                     interlacingScale = 1.0f;
+                    enableFog = true;
+                    fogColor = new Color(0.002f, 0.004f, 0.007f, 1f);
+                    fogMode = FogMode.Linear;
+                    fogStartDistance = 7f;
+                    fogEndDistance = 38f;
                     break;
 
                 case PSXPreset.SubtleRetro:
@@ -135,6 +166,11 @@ namespace SpaceHorror.Rendering
                     enableInterlacing = false;
                     interlacingIntensity = 0.08f;
                     interlacingScale = 1.0f;
+                    enableFog = true;
+                    fogColor = new Color(0.008f, 0.012f, 0.02f, 1f);
+                    fogMode = FogMode.Linear;
+                    fogStartDistance = 10f;
+                    fogEndDistance = 50f;
                     break;
 
                 case PSXPreset.CleanModern:
@@ -144,6 +180,7 @@ namespace SpaceHorror.Rendering
                     enablePixelation = false;
                     enableDithering = false;
                     enableInterlacing = false;
+                    enableFog = false;
                     break;
 
                 case PSXPreset.Custom:
@@ -155,7 +192,7 @@ namespace SpaceHorror.Rendering
         }
 
         /// <summary>
-        /// Pushes settings to global shader uniforms and the URP Renderer Feature.
+        /// Pushes settings to global shader uniforms, the URP Renderer Feature, and RenderSettings Fog.
         /// </summary>
         public void ApplyActiveSettings()
         {
@@ -180,6 +217,20 @@ namespace SpaceHorror.Rendering
                     settings.interlacingIntensity = interlacingIntensity;
                     settings.interlacingScale = interlacingScale;
                 }
+            }
+
+            // 3. Apply Deep Space Atmospheric Fog to Scene
+            RenderSettings.fog = enableFog;
+            RenderSettings.fogColor = fogColor;
+            RenderSettings.fogMode = fogMode;
+            if (fogMode == FogMode.Linear)
+            {
+                RenderSettings.fogStartDistance = fogStartDistance;
+                RenderSettings.fogEndDistance = fogEndDistance;
+            }
+            else
+            {
+                RenderSettings.fogDensity = fogDensity;
             }
         }
     }

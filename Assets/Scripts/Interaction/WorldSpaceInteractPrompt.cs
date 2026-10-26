@@ -48,6 +48,60 @@ namespace SpaceHorror.Interaction
                 canvasGroup.alpha = 0f;
 
             transform.localScale = Vector3.zero;
+
+            EnsureObsidianPlate();
+        }
+
+        /// <summary>
+        /// Guarantees that the high-contrast Film Noir obsidian plate with white border exists behind the prompt text.
+        /// </summary>
+        public void EnsureObsidianPlate()
+        {
+            Transform container = transform.Find("Container");
+            if (container == null) return;
+
+            Transform existingBorder = container.Find("Border_Frame");
+            if (existingBorder != null) return;
+
+            Shader uiShader = Shader.Find("UI/Default");
+            Material overlayMat = null;
+            if (uiShader != null)
+            {
+                overlayMat = new Material(uiShader);
+                overlayMat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+            }
+
+            // 1. Outer Stark White Border Frame
+            GameObject borderObj = new GameObject("Border_Frame");
+            borderObj.transform.SetParent(container, false);
+            borderObj.transform.SetAsFirstSibling();
+
+            RectTransform borderRect = borderObj.AddComponent<RectTransform>();
+            borderRect.anchorMin = new Vector2(0.5f, 0.5f);
+            borderRect.anchorMax = new Vector2(0.5f, 0.5f);
+            borderRect.pivot = new Vector2(0.5f, 0.5f);
+            borderRect.anchoredPosition = new Vector2(0f, -2f);
+            borderRect.sizeDelta = new Vector2(310f, 66f);
+
+            Image borderImg = borderObj.AddComponent<Image>();
+            borderImg.color = new Color(0.96f, 0.98f, 1.0f, 0.95f); // Stark White
+            borderImg.raycastTarget = false;
+            if (overlayMat != null) borderImg.material = overlayMat;
+
+            // 2. Inner Deep Pitch Black Obsidian Plate (2px inset)
+            GameObject plateObj = new GameObject("Obsidian_Plate");
+            plateObj.transform.SetParent(borderObj.transform, false);
+
+            RectTransform plateRect = plateObj.AddComponent<RectTransform>();
+            plateRect.anchorMin = Vector2.zero;
+            plateRect.anchorMax = Vector2.one;
+            plateRect.offsetMin = new Vector2(2f, 2f);
+            plateRect.offsetMax = new Vector2(-2f, -2f);
+
+            Image plateImg = plateObj.AddComponent<Image>();
+            plateImg.color = new Color(0.015f, 0.02f, 0.025f, 0.94f); // Deep Black Obsidian
+            plateImg.raycastTarget = false;
+            if (overlayMat != null) plateImg.material = overlayMat;
         }
 
         private void LateUpdate()
@@ -98,7 +152,7 @@ namespace SpaceHorror.Interaction
             if (actionPromptText != null)
             {
                 string holdSuffix = isHold ? " (HOLD)" : "";
-                actionPromptText.text = $"<color=#38BDF8>[{key}]</color> {actionPrompt}{holdSuffix}";
+                actionPromptText.text = $"<b>[{key}]</b>  {actionPrompt}{holdSuffix}";
             }
 
             if (objectiveTitleText != null)
@@ -167,6 +221,32 @@ namespace SpaceHorror.Interaction
             contRect.pivot = new Vector2(0.5f, 0.5f);
             contRect.sizeDelta = new Vector2(300f, 80f);
 
+            // 1. Film Noir Obsidian Backing Plate with Stark White Border
+            GameObject borderObj = new GameObject("Border_Frame");
+            borderObj.transform.SetParent(container.transform, false);
+            RectTransform borderRect = borderObj.AddComponent<RectTransform>();
+            borderRect.anchorMin = new Vector2(0.5f, 0.5f);
+            borderRect.anchorMax = new Vector2(0.5f, 0.5f);
+            borderRect.pivot = new Vector2(0.5f, 0.5f);
+            borderRect.anchoredPosition = new Vector2(0f, -2f);
+            borderRect.sizeDelta = new Vector2(310f, 66f);
+
+            Image borderImg = borderObj.AddComponent<Image>();
+            borderImg.color = new Color(0.96f, 0.98f, 1.0f, 0.95f); // Stark White 1.5px border
+            borderImg.raycastTarget = false;
+
+            GameObject plateObj = new GameObject("Obsidian_Plate");
+            plateObj.transform.SetParent(borderObj.transform, false);
+            RectTransform plateRect = plateObj.AddComponent<RectTransform>();
+            plateRect.anchorMin = Vector2.zero;
+            plateRect.anchorMax = Vector2.one;
+            plateRect.offsetMin = new Vector2(2f, 2f);
+            plateRect.offsetMax = new Vector2(-2f, -2f);
+
+            Image plateImg = plateObj.AddComponent<Image>();
+            plateImg.color = new Color(0.015f, 0.02f, 0.025f, 0.94f); // Deep Black Obsidian
+            plateImg.raycastTarget = false;
+
             // Primary action prompt text
             GameObject promptTextObj = new GameObject("ActionPrompt_Text");
             promptTextObj.transform.SetParent(container.transform, false);
@@ -181,10 +261,8 @@ namespace SpaceHorror.Interaction
             promptTmp.text = "[LMB] REFILL OXYGEN";
             promptTmp.fontSize = 20f;
             promptTmp.alignment = TextAlignmentOptions.Center;
-            promptTmp.color = new Color(0.92f, 0.96f, 1f, 1f);
+            promptTmp.color = new Color(0.96f, 0.98f, 1f, 1f);
             promptTmp.fontStyle = FontStyles.Bold;
-            promptTmp.outlineWidth = 0.22f;
-            promptTmp.outlineColor = new Color32(5, 8, 14, 230);
             promptTmp.textWrappingMode = TextWrappingModes.NoWrap;
             promptTmp.raycastTarget = false;
 
@@ -202,9 +280,7 @@ namespace SpaceHorror.Interaction
             subTmp.text = "EMERGENCY O2 STATION";
             subTmp.fontSize = 12f;
             subTmp.alignment = TextAlignmentOptions.Center;
-            subTmp.color = new Color(0.60f, 0.68f, 0.78f, 0.85f);
-            subTmp.outlineWidth = 0.18f;
-            subTmp.outlineColor = new Color32(5, 8, 14, 200);
+            subTmp.color = new Color(0.72f, 0.76f, 0.82f, 0.90f); // Ash Silver
             subTmp.textWrappingMode = TextWrappingModes.NoWrap;
             subTmp.raycastTarget = false;
 
@@ -219,7 +295,7 @@ namespace SpaceHorror.Interaction
             barBGRect.sizeDelta = new Vector2(160f, 3f);
 
             Image barBGImage = barBGObj.AddComponent<Image>();
-            barBGImage.color = new Color(0.10f, 0.15f, 0.22f, 0.60f);
+            barBGImage.color = new Color(0.18f, 0.20f, 0.22f, 0.85f); // Charcoal Noir
             barBGImage.raycastTarget = false;
 
             GameObject barFillObj = new GameObject("ProgressBar_Fill");
@@ -230,7 +306,7 @@ namespace SpaceHorror.Interaction
             barFillRect.sizeDelta = Vector2.zero;
 
             Image barFillImage = barFillObj.AddComponent<Image>();
-            barFillImage.color = new Color(0.35f, 0.85f, 1.0f, 0.95f);
+            barFillImage.color = new Color(0.96f, 0.98f, 1.0f, 0.98f); // Stark White Noir
             barFillImage.type = Image.Type.Filled;
             barFillImage.fillMethod = Image.FillMethod.Horizontal;
             barFillImage.fillOrigin = 0;
@@ -239,7 +315,7 @@ namespace SpaceHorror.Interaction
 
             barBGObj.SetActive(false);
 
-            // Always On Top: Ensure text and progress bar are NEVER occluded by any 3D geometry
+            // Always On Top: Ensure text, plates, and progress bar are NEVER occluded by any 3D geometry
             if (promptTmp.fontSharedMaterial != null)
             {
                 Material overlayFontMat = new Material(promptTmp.fontSharedMaterial);
@@ -259,6 +335,8 @@ namespace SpaceHorror.Interaction
             {
                 Material overlayUIMat = new Material(uiShader);
                 overlayUIMat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+                borderImg.material = overlayUIMat;
+                plateImg.material = overlayUIMat;
                 barBGImage.material = overlayUIMat;
                 barFillImage.material = overlayUIMat;
             }

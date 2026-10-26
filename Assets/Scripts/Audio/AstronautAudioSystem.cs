@@ -27,6 +27,9 @@ namespace SpaceHorror.Audio
         [Tooltip("Custom heavy/panicked breathing clip. If null, procedural rapid breath is generated.")]
         [SerializeField] private AudioClip customBreathingHeavyClip;
 
+        [Tooltip("Custom awakening gasp / breath clip. If null, procedural sharp suit intake is generated.")]
+        [SerializeField] private AudioClip customWakeUpGaspClip;
+
         [Tooltip("Custom low oxygen computer alarm. If null, procedural retro 2-tone alarm is generated.")]
         [SerializeField] private AudioClip customLowOxygenAlarmClip;
 
@@ -74,6 +77,7 @@ namespace SpaceHorror.Audio
         private AudioClip activeThrusterClip;
         private AudioClip activeImpactClip;
         private AudioClip activePunctureClip;
+        private AudioClip activeWakeUpGaspClip;
 
         // Component References
         private AstronautSurvival survival;
@@ -213,6 +217,9 @@ namespace SpaceHorror.Audio
             // Impact & Puncture
             activeImpactClip = customSuitImpactClip != null ? customSuitImpactClip : GenerateProceduralImpactThud();
             activePunctureClip = customSuitPunctureClip != null ? customSuitPunctureClip : GenerateProceduralPunctureLeak();
+
+            // Wake-up Gasp
+            activeWakeUpGaspClip = customWakeUpGaspClip != null ? customWakeUpGaspClip : GenerateProceduralWakeUpGasp();
         }
 
         #endregion
@@ -368,6 +375,36 @@ namespace SpaceHorror.Audio
                 float vol = Mathf.InverseLerp(1.5f, 10f, impactSpeed) * impactVolume * masterVolume;
                 impactSource.pitch = UnityEngine.Random.Range(0.9f, 1.15f);
                 impactSource.PlayOneShot(activeImpactClip, Mathf.Max(0.3f, vol));
+            }
+        }
+
+        #endregion
+
+        #region Awakening & Cinematic Audio Triggers
+
+        /// <summary>
+        /// Plays an awakening breath intake, triggers an adrenaline heart rate spike,
+        /// and plays an immediate heartbeat thump.
+        /// </summary>
+        public void TriggerWakeUpGasp()
+        {
+            if (activeWakeUpGaspClip != null && breathingSource != null)
+            {
+                breathingSource.pitch = UnityEngine.Random.Range(0.96f, 1.04f);
+                breathingSource.PlayOneShot(activeWakeUpGaspClip, breathingVolume * masterVolume * 1.35f);
+            }
+
+            // Spike heart rate to simulate awakening shock / panic
+            if (survival != null)
+            {
+                survival.TriggerHeartSpike(48f);
+            }
+
+            // Immediate heavy heartbeat thump
+            if (heartbeatSource != null && activeHeartbeatClip != null)
+            {
+                heartbeatSource.pitch = 1.15f;
+                heartbeatSource.PlayOneShot(activeHeartbeatClip, heartbeatVolume * masterVolume * 1.1f);
             }
         }
 
@@ -585,6 +622,71 @@ namespace SpaceHorror.Audio
             }
 
             AudioClip clip = AudioClip.Create("Procedural_PunctureLeak", samples, 1, SAMPLE_RATE, false);
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// Generates a visceral awakening gasp inside the enclosed astronaut helmet.
+        /// Synthesizes an initial oxygen regulator solenoid click followed by an abrupt,
+        /// sharp inhalation rush that tapers into a heavy, shuddering exhale.
+        /// </summary>
+        private AudioClip GenerateProceduralWakeUpGasp()
+        {
+            float duration = 1.9f;
+            int samples = Mathf.CeilToInt(duration * SAMPLE_RATE);
+            float[] data = new float[samples];
+
+            System.Random rand = new System.Random(2026);
+            float lpState = 0f;
+
+            for (int i = 0; i < samples; i++)
+            {
+                float t = (float)i / SAMPLE_RATE;
+                float sample = 0f;
+
+                // 1. Initial solenoid valve click / pop (t = 0 to 0.04s)
+                if (t < 0.04f)
+                {
+                    float clickEnv = Mathf.Exp(-120f * t);
+                    sample += Mathf.Sin(2f * Mathf.PI * 1450f * t) * clickEnv * 0.7f;
+                    sample += (float)(rand.NextDouble() * 2.0 - 1.0) * clickEnv * 0.4f;
+                }
+
+                // 2. Sharp Awakening Gasp Inhalation (t = 0.04s to 0.95s)
+                if (t >= 0.04f && t < 0.95f)
+                {
+                    float tRel = (t - 0.04f) / (0.95f - 0.04f);
+                    // Ramping intake curve: reaches sudden crescendo then cuts
+                    float intakeEnv = Mathf.Pow(Mathf.Sin(tRel * Mathf.PI * 0.5f), 1.4f);
+
+                    float white = (float)(rand.NextDouble() * 2.0 - 1.0);
+                    // Filter shifts upwards as chest expands and airflow accelerates
+                    float cutoff = Mathf.Lerp(0.12f, 0.45f, tRel);
+                    lpState = Mathf.Lerp(lpState, white, cutoff);
+
+                    // Formant resonances simulating oral cavity / mic diaphragm
+                    float formant = Mathf.Sin(2f * Mathf.PI * 420f * t) * 0.15f
+                                  + Mathf.Sin(2f * Mathf.PI * 880f * t) * 0.08f;
+
+                    sample += (lpState + formant) * intakeEnv * 0.95f;
+                }
+                // 3. Shuddering Exhale Recovery (t = 0.95s to 1.9s)
+                else if (t >= 0.95f)
+                {
+                    float tRel = (t - 0.95f) / (1.9f - 0.95f);
+                    float exhaleEnv = Mathf.Sin(tRel * Mathf.PI) * Mathf.Exp(-2.2f * tRel);
+
+                    float white = (float)(rand.NextDouble() * 2.0 - 1.0);
+                    lpState = Mathf.Lerp(lpState, white, 0.18f);
+
+                    sample += lpState * exhaleEnv * 0.55f;
+                }
+
+                data[i] = Mathf.Clamp(sample, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Procedural_WakeUpGasp", samples, 1, SAMPLE_RATE, false);
             clip.SetData(data, 0);
             return clip;
         }

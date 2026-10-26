@@ -126,11 +126,28 @@ namespace SpaceHorror.Interaction
         public ObjectiveType Type => objectiveType;
         public InteractionMethod Method => interactionMethod;
         public float HoldDuration => holdDuration;
-        public bool IsSingleUse => isSingleUse;
+        public bool IsSingleUse
+        {
+            get => isSingleUse;
+            set => isSingleUse = value;
+        }
         public bool IsCompleted => isCompleted;
         public bool CanInteract => !isCompleted || !isSingleUse;
         public string DataLogTranscript => dataLogTranscript;
         public AudioClip AudioLogClip => customAudioLogClip;
+
+        /// <summary>
+        /// Updates the prompts dynamically at runtime (e.g. when state changes from 'Accept Contract' to 'In Progress').
+        /// </summary>
+        public void ConfigureRuntimePrompts(string title, string prompt, string completionMsg = "")
+        {
+            objectiveTitle = title;
+            actionPrompt = prompt;
+            if (!string.IsNullOrEmpty(completionMsg))
+            {
+                completionMessage = completionMsg;
+            }
+        }
 
         private static Material GetOrCreateOutlineMaterial()
         {
@@ -410,6 +427,13 @@ namespace SpaceHorror.Interaction
             {
                 isCompleted = true;
                 SetHighlight(false);
+
+                // Shut down radio beacon transmission if attached
+                SignalBeacon beacon = GetComponent<SignalBeacon>();
+                if (beacon != null && beacon.DeactivateOnMissionComplete)
+                {
+                    beacon.SetTransmitting(false);
+                }
             }
 
             // Invoke designer UnityEvent
@@ -430,6 +454,12 @@ namespace SpaceHorror.Interaction
         public void ResetObjective()
         {
             isCompleted = false;
+
+            SignalBeacon beacon = GetComponent<SignalBeacon>();
+            if (beacon != null)
+            {
+                beacon.SetTransmitting(true);
+            }
         }
     }
 }

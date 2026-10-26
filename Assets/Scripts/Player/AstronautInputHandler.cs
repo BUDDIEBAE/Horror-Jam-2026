@@ -38,6 +38,7 @@ namespace SpaceHorror.Player
         public bool InteractPressed { get; private set; }    // E (Tap interaction this frame)
         public bool IsInteracting { get; private set; }      // E (Held interaction)
         public bool SuppressRollRight { get; set; }          // True when looking at an interactable objective
+        public bool InputEnabled { get; set; } = true;        // Can be toggled for cinematic waking transitions
 
         private void Start()
         {
@@ -55,6 +56,15 @@ namespace SpaceHorror.Player
 
         private void ReadInputs()
         {
+            if (!InputEnabled)
+            {
+                MovementInput = Vector3.zero;
+                RotationInput = Vector3.zero;
+                IsBoosting = false;
+                IsBraking = false;
+                return;
+            }
+
             var keyboard = Keyboard.current;
             var mouse = Mouse.current;
 

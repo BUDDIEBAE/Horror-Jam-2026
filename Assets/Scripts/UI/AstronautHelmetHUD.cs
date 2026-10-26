@@ -63,6 +63,17 @@ namespace SpaceHorror.UI
         [SerializeField] private TMP_Text transmissionLogTitle;
         [SerializeField] private TMP_Text transmissionLogBody;
 
+        [Header("Mission Directive Pod (Top-Left)")]
+        [SerializeField] private CanvasGroup directiveGroup;
+        [SerializeField] private TMP_Text directiveDayText;
+        [SerializeField] private TMP_Text directiveMessageText;
+
+        [Header("Day Announcement Banner (Center Screen)")]
+        [SerializeField] private CanvasGroup dayBannerGroup;
+        [SerializeField] private TMP_Text dayBannerTitleText;
+        [SerializeField] private TMP_Text dayBannerSubtitleText;
+        private float dayBannerTimer = 0f;
+
         [Header("Critical Suffocation & Horror FX")]
         [SerializeField] private CanvasGroup warningAlertGroup;
         [SerializeField] private TMP_Text warningAlertText;
@@ -75,7 +86,7 @@ namespace SpaceHorror.UI
         // Film Noir Visual Palette (Chiaroscuro Silver & Stark Contrast)
         private readonly Color colNoirWhite = new Color(0.96f, 0.98f, 1.0f, 0.95f);       // Crisp stark white
         private readonly Color colNoirAshSilver = new Color(0.75f, 0.78f, 0.82f, 0.9f);    // Caution ash-silver
-        private readonly Color colNoirDangerRed = new Color(1.0f, 0.22f, 0.25f, 0.95f);    // Emergency stark crimson
+        private readonly Color colNoirStarkInvert = new Color(1.0f, 1.0f, 1.0f, 1.0f);     // High-contrast stark white strobe
         private readonly Color colNoirMutedDim = new Color(0.5f, 0.54f, 0.58f, 0.7f);      // Inactive / Muted grey
 
         // Runtime states
@@ -99,6 +110,8 @@ namespace SpaceHorror.UI
 
             SetupEventListeners();
             ApplyCustomAssets();
+            EnsureToolsPanelLayout();
+            EnsureDirectivePanelLayout();
         }
 
         private void Awake()
@@ -121,6 +134,45 @@ namespace SpaceHorror.UI
                 flashlightController = GetComponentInParent<HelmetFlashlight>();
 
             ApplyCustomAssets();
+            EnsureToolsPanelLayout();
+            EnsureDirectivePanelLayout();
+        }
+
+        private CanvasGroup hudCanvasGroup;
+
+        /// <summary>
+        /// Modulates overall HUD alpha (e.g. for waking-up cold-boot CRT flicker or blackout sequences).
+        /// </summary>
+        public void SetHUDAlpha(float alpha)
+        {
+            if (hudCanvasGroup == null)
+            {
+                hudCanvasGroup = GetComponent<CanvasGroup>();
+                if (hudCanvasGroup == null)
+                {
+                    hudCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+                }
+            }
+            hudCanvasGroup.alpha = Mathf.Clamp01(alpha);
+        }
+
+        /// <summary>
+        /// Repositions the Tools panel (RCS & Lamp) to the Top-Right corner so it never collides with the Signal Tracker.
+        /// </summary>
+        private void EnsureToolsPanelLayout()
+        {
+            if (rcsStatusText != null)
+            {
+                RectTransform panelRect = rcsStatusText.transform.parent as RectTransform;
+                if (panelRect != null)
+                {
+                    panelRect.anchorMin = new Vector2(1f, 1f);
+                    panelRect.anchorMax = new Vector2(1f, 1f);
+                    panelRect.pivot = new Vector2(1f, 1f);
+                    panelRect.anchoredPosition = new Vector2(-45f, -22f);
+                    panelRect.sizeDelta = new Vector2(320f, 38f);
+                }
+            }
         }
 
         private void OnEnable()
@@ -283,19 +335,19 @@ namespace SpaceHorror.UI
             {
                 oxygenFillBar.fillAmount = normalizedO2;
 
-                // Color coding based on remaining supply (Film Noir Chiaroscuro)
+                // Contrast coding based on remaining supply (Film Noir Chiaroscuro)
                 if (normalizedO2 > 0.45f)
                     oxygenFillBar.color = colNoirWhite;
                 else if (normalizedO2 > 0.25f)
                     oxygenFillBar.color = colNoirAshSilver;
                 else
-                    oxygenFillBar.color = colNoirDangerRed;
+                    oxygenFillBar.color = colNoirStarkInvert;
             }
 
             if (oxygenValueText != null)
             {
                 int percent = Mathf.RoundToInt(normalizedO2 * 100f);
-                string statusTag = normalizedO2 > 0.25f ? "O2" : "<color=#FF3344>O2 CRIT</color>";
+                string statusTag = normalizedO2 > 0.25f ? "O2" : "[!] O2 CRIT";
                 oxygenValueText.text = $"{statusTag}: {percent}%";
             }
         }
@@ -305,13 +357,12 @@ namespace SpaceHorror.UI
             if (heartRateText != null)
             {
                 int bpmInt = Mathf.RoundToInt(bpm);
-                string colorHex = bpm > 130f ? "#FF3344" : (bpm > 100f ? "#CBD5E1" : "#FFFFFF");
-                heartRateText.text = $"<color={colorHex}>{bpmInt} BPM</color>";
+                heartRateText.text = $"{bpmInt} BPM";
             }
 
             if (heartIconImage != null)
             {
-                heartIconImage.color = bpm > 130f ? colNoirDangerRed : (bpm > 100f ? colNoirAshSilver : colNoirWhite);
+                heartIconImage.color = bpm > 130f ? colNoirStarkInvert : (bpm > 100f ? colNoirAshSilver : colNoirWhite);
             }
         }
 
@@ -326,7 +377,7 @@ namespace SpaceHorror.UI
                 }
                 else
                 {
-                    suitStatusText.text = $"<color=#FF3344>LEAK: {integrityPercent}%</color>";
+                    suitStatusText.text = $"[!] SUIT LEAK: {integrityPercent}%";
                 }
             }
         }
@@ -346,7 +397,7 @@ namespace SpaceHorror.UI
             if (warningAlertGroup != null) warningAlertGroup.alpha = 1f;
             if (warningAlertText != null)
             {
-                warningAlertText.text = "<color=#FF2233>LIFE SUPPORT TERMINATED\nSYSTEM OFFLINE</color>";
+                warningAlertText.text = "LIFE SUPPORT TERMINATED\nSYSTEM OFFLINE";
             }
         }
 
@@ -386,6 +437,8 @@ namespace SpaceHorror.UI
                 if (rcsStatusText != null) rcsStatusText.font = customFont;
                 if (lampStatusText != null) lampStatusText.font = customFont;
                 if (warningAlertText != null) warningAlertText.font = customFont;
+                if (directiveDayText != null) directiveDayText.font = customFont;
+                if (directiveMessageText != null) directiveMessageText.font = customFont;
             }
 
             // Apply custom visor frame if provided
@@ -431,6 +484,19 @@ namespace SpaceHorror.UI
                 else if (transmissionLogGroup.alpha > 0f)
                 {
                     transmissionLogGroup.alpha = Mathf.MoveTowards(transmissionLogGroup.alpha, 0f, Time.deltaTime * 2f);
+                }
+            }
+
+            if (dayBannerGroup != null)
+            {
+                if (dayBannerTimer > 0f)
+                {
+                    dayBannerTimer -= Time.deltaTime;
+                    dayBannerGroup.alpha = Mathf.MoveTowards(dayBannerGroup.alpha, 1f, Time.deltaTime * 3f);
+                }
+                else if (dayBannerGroup.alpha > 0f)
+                {
+                    dayBannerGroup.alpha = Mathf.MoveTowards(dayBannerGroup.alpha, 0f, Time.deltaTime * 2.5f);
                 }
             }
         }
@@ -491,6 +557,314 @@ namespace SpaceHorror.UI
         {
             if (transmissionLogGroup != null) transmissionLogGroup.alpha = 0f;
             transmissionTimer = 0f;
+        }
+
+        /// <summary>
+        /// Updates the Paint-style Objective Card on the visor HUD (Day title on top, box with bullets below).
+        /// </summary>
+        public void SetMissionDirective(int dayNumber, string directiveText)
+        {
+            EnsureDirectivePanelLayout();
+            if (directiveDayText != null) directiveDayText.text = $"DAY {dayNumber}";
+
+            if (directiveMessageText != null)
+            {
+                if (!directiveText.StartsWith("-"))
+                {
+                    directiveMessageText.text = $"- {directiveText}";
+                }
+                else
+                {
+                    directiveMessageText.text = directiveText;
+                }
+            }
+
+            if (directiveGroup != null) directiveGroup.alpha = 1f;
+        }
+
+        /// <summary>
+        /// Updates the Objective Card with structured bullet points and visual progress indicators (matching Paint layout).
+        /// Supports individual completedStates for multi-objective contracts.
+        /// </summary>
+        public void SetObjectiveChecklist(int dayNumber, string[] tasks, bool[] completedStates, int activeTaskIndex = -1)
+        {
+            EnsureDirectivePanelLayout();
+            if (directiveDayText != null) directiveDayText.text = $"DAY {dayNumber}";
+
+            if (directiveMessageText != null && tasks != null)
+            {
+                System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                for (int i = 0; i < tasks.Length; i++)
+                {
+                    bool isDone = completedStates != null && i < completedStates.Length ? completedStates[i] : (activeTaskIndex >= 0 && i < activeTaskIndex);
+                    bool isActive = (i == activeTaskIndex);
+
+                    if (isDone)
+                    {
+                        // Completed task: Dimmed struck-through silver with [DONE] tag
+                        sb.AppendLine($"<color=#64748B>- <s>{tasks[i]}</s>  <size=10>[DONE]</size></color>");
+                    }
+                    else if (isActive)
+                    {
+                        // Current active task: Stark bright white bold
+                        sb.AppendLine($"<color=#FFFFFF>- <b>{tasks[i]}</b></color>");
+                    }
+                    else
+                    {
+                        // Upcoming pending task: Subtle muted silver
+                        sb.AppendLine($"<color=#94A3B8>- {tasks[i]}</color>");
+                    }
+                }
+                directiveMessageText.text = sb.ToString().TrimEnd();
+            }
+
+            if (directiveGroup != null) directiveGroup.alpha = 1f;
+        }
+
+        /// <summary>
+        /// Convenience overload for linear progression tasks.
+        /// </summary>
+        public void SetObjectiveChecklist(int dayNumber, string[] tasks, int activeTaskIndex = 0)
+        {
+            SetObjectiveChecklist(dayNumber, tasks, null, activeTaskIndex);
+        }
+
+        /// <summary>
+        /// Displays a dramatic centered day title card (e.g. 'DAY 01' // 'ORBITAL EXPEDITION')
+        /// </summary>
+        public void ShowDayBanner(int dayNumber, string title, float duration = 3.5f)
+        {
+            EnsureDayBannerLayout();
+            if (dayBannerTitleText != null) dayBannerTitleText.text = $"DAY {dayNumber:D2}";
+            if (dayBannerSubtitleText != null) dayBannerSubtitleText.text = title;
+            if (dayBannerGroup != null)
+            {
+                dayBannerGroup.alpha = 0f;
+                dayBannerGroup.blocksRaycasts = false;
+                dayBannerGroup.interactable = false;
+            }
+            dayBannerTimer = duration;
+        }
+
+        /// <summary>
+        /// Immediately hides the day announcement banner.
+        /// </summary>
+        public void HideDayBanner()
+        {
+            dayBannerTimer = 0f;
+            if (dayBannerGroup != null)
+            {
+                dayBannerGroup.alpha = 0f;
+            }
+        }
+
+        [ContextMenu("Rebuild Objective Card Layout")]
+        public void RebuildObjectiveCardLayout()
+        {
+            if (hudCanvas == null) hudCanvas = GetComponent<Canvas>();
+            if (hudCanvas == null) return;
+
+            Transform existing = hudCanvas.transform.Find("Objective_Card_Panel");
+            if (existing != null)
+            {
+                DestroyImmediate(existing.gameObject);
+                directiveGroup = null;
+                directiveDayText = null;
+                directiveMessageText = null;
+            }
+            EnsureDirectivePanelLayout();
+        }
+
+        private void EnsureDirectivePanelLayout()
+        {
+            if (directiveGroup != null && directiveMessageText != null) return;
+            if (hudCanvas == null) hudCanvas = GetComponent<Canvas>();
+            if (hudCanvas == null) return;
+
+            // Remove legacy cramped horizontal panel if present
+            Transform oldPanel = hudCanvas.transform.Find("Top_Directive_Panel");
+            if (oldPanel != null)
+            {
+                DestroyImmediate(oldPanel.gameObject);
+            }
+
+            Transform existing = hudCanvas.transform.Find("Objective_Card_Panel");
+            if (existing != null)
+            {
+                directiveGroup = existing.GetComponent<CanvasGroup>();
+                directiveDayText = existing.Find("Day_Title_Text")?.GetComponent<TMP_Text>();
+                directiveMessageText = existing.Find("Box_Frame/Box_Inner/Objective_List_Text")?.GetComponent<TMP_Text>();
+                if (directiveMessageText != null) return;
+                DestroyImmediate(existing.gameObject);
+            }
+
+            // Root Card Container (Top-Left corner)
+            GameObject cardRoot = new GameObject("Objective_Card_Panel");
+            cardRoot.transform.SetParent(hudCanvas.transform, false);
+
+            RectTransform rootRect = cardRoot.AddComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0f, 1f);
+            rootRect.anchorMax = new Vector2(0f, 1f);
+            rootRect.pivot = new Vector2(0f, 1f);
+            rootRect.anchoredPosition = new Vector2(40f, -25f);
+            rootRect.sizeDelta = new Vector2(340f, 215f);
+
+            directiveGroup = cardRoot.AddComponent<CanvasGroup>();
+            directiveGroup.alpha = 1f;
+
+            // 1. "DAY 1" Header on Top (Outside / Above the Box)
+            GameObject dayObj = new GameObject("Day_Title_Text");
+            dayObj.transform.SetParent(cardRoot.transform, false);
+            RectTransform dayRect = dayObj.AddComponent<RectTransform>();
+            dayRect.anchorMin = new Vector2(0f, 1f);
+            dayRect.anchorMax = new Vector2(1f, 1f);
+            dayRect.pivot = new Vector2(0f, 1f);
+            dayRect.anchoredPosition = new Vector2(2f, 0f);
+            dayRect.sizeDelta = new Vector2(0f, 30f);
+
+            directiveDayText = dayObj.AddComponent<TextMeshProUGUI>();
+            directiveDayText.text = "DAY 1";
+            directiveDayText.fontSize = 24f;
+            directiveDayText.fontStyle = FontStyles.Bold;
+            directiveDayText.color = new Color(0.96f, 0.98f, 1f, 1f);
+            directiveDayText.alignment = TextAlignmentOptions.Left;
+
+            // 2. The Box Frame (White Outline Border, 2px)
+            GameObject boxFrameObj = new GameObject("Box_Frame");
+            boxFrameObj.transform.SetParent(cardRoot.transform, false);
+            RectTransform frameRect = boxFrameObj.AddComponent<RectTransform>();
+            frameRect.anchorMin = new Vector2(0f, 0f);
+            frameRect.anchorMax = new Vector2(1f, 1f);
+            frameRect.pivot = new Vector2(0f, 1f);
+            frameRect.offsetMin = Vector2.zero;
+            frameRect.offsetMax = new Vector2(0f, -34f); // Sits right below DAY 1
+
+            Image frameBorder = boxFrameObj.AddComponent<Image>();
+            frameBorder.color = new Color(0.96f, 0.98f, 1f, 1f); // Stark Crisp White Border
+
+            // 3. Inner Box (Obsidian Dark Background inset by 2px to leave crisp border)
+            GameObject boxInnerObj = new GameObject("Box_Inner");
+            boxInnerObj.transform.SetParent(boxFrameObj.transform, false);
+            RectTransform innerRect = boxInnerObj.AddComponent<RectTransform>();
+            innerRect.anchorMin = Vector2.zero;
+            innerRect.anchorMax = Vector2.one;
+            innerRect.offsetMin = new Vector2(2f, 2f);
+            innerRect.offsetMax = new Vector2(-2f, -2f);
+
+            Image innerBg = boxInnerObj.AddComponent<Image>();
+            innerBg.color = new Color(0.02f, 0.025f, 0.035f, 0.92f); // Deep Obsidian Backing
+
+            // 4. "OBJECTIVE" Header inside Box
+            GameObject objHeader = new GameObject("Objective_Header_Text");
+            objHeader.transform.SetParent(boxInnerObj.transform, false);
+            RectTransform objHeaderRect = objHeader.AddComponent<RectTransform>();
+            objHeaderRect.anchorMin = new Vector2(0f, 1f);
+            objHeaderRect.anchorMax = new Vector2(1f, 1f);
+            objHeaderRect.pivot = new Vector2(0f, 1f);
+            objHeaderRect.anchoredPosition = new Vector2(16f, -10f);
+            objHeaderRect.sizeDelta = new Vector2(-32f, 26f);
+
+            TMP_Text headerText = objHeader.AddComponent<TextMeshProUGUI>();
+            headerText.text = "OBJECTIVE";
+            headerText.fontSize = 16f;
+            headerText.fontStyle = FontStyles.Bold;
+            headerText.characterSpacing = 2.0f;
+            headerText.color = new Color(0.96f, 0.98f, 1f, 1f);
+            headerText.alignment = TextAlignmentOptions.Left;
+
+            // 5. Divider Line under OBJECTIVE
+            GameObject divObj = new GameObject("Header_Divider");
+            divObj.transform.SetParent(boxInnerObj.transform, false);
+            RectTransform divRect = divObj.AddComponent<RectTransform>();
+            divRect.anchorMin = new Vector2(0f, 1f);
+            divRect.anchorMax = new Vector2(1f, 1f);
+            divRect.pivot = new Vector2(0f, 0.5f);
+            divRect.anchoredPosition = new Vector2(14f, -38f);
+            divRect.sizeDelta = new Vector2(-28f, 1.5f);
+
+            Image divImg = divObj.AddComponent<Image>();
+            divImg.color = new Color(0.65f, 0.70f, 0.78f, 0.40f);
+
+            // 6. Objective List Text (Bullet points with auto-wrapping)
+            GameObject listObj = new GameObject("Objective_List_Text");
+            listObj.transform.SetParent(boxInnerObj.transform, false);
+            RectTransform listRect = listObj.AddComponent<RectTransform>();
+            listRect.anchorMin = new Vector2(0f, 0f);
+            listRect.anchorMax = new Vector2(1f, 1f);
+            listRect.pivot = new Vector2(0f, 1f);
+            listRect.offsetMin = new Vector2(16f, 12f);
+            listRect.offsetMax = new Vector2(-16f, -44f);
+
+            directiveMessageText = listObj.AddComponent<TextMeshProUGUI>();
+            directiveMessageText.text = "- Access Ship Mission Terminal\n- Salvage Satellite Log (142.8 MHz)\n- Return to Ship Airlock (121.5 MHz)";
+            directiveMessageText.fontSize = 13.5f;
+            directiveMessageText.lineSpacing = 8f;
+            directiveMessageText.color = new Color(0.88f, 0.90f, 0.94f, 0.95f);
+            directiveMessageText.alignment = TextAlignmentOptions.TopLeft;
+            directiveMessageText.textWrappingMode = TextWrappingModes.Normal;
+            directiveMessageText.overflowMode = TextOverflowModes.Overflow;
+        }
+
+        private void EnsureDayBannerLayout()
+        {
+            if (dayBannerGroup != null) return;
+            if (hudCanvas == null) hudCanvas = GetComponent<Canvas>();
+            if (hudCanvas == null) return;
+
+            Transform existing = hudCanvas.transform.Find("Day_Banner_Panel");
+            if (existing != null)
+            {
+                dayBannerGroup = existing.GetComponent<CanvasGroup>();
+                dayBannerTitleText = existing.Find("Day_Title")?.GetComponent<TMP_Text>();
+                dayBannerSubtitleText = existing.Find("Day_Subtitle")?.GetComponent<TMP_Text>();
+                return;
+            }
+
+            GameObject bannerObj = new GameObject("Day_Banner_Panel");
+            bannerObj.transform.SetParent(hudCanvas.transform, false);
+
+            RectTransform rect = bannerObj.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, 60f);
+            rect.sizeDelta = new Vector2(600f, 90f);
+
+            dayBannerGroup = bannerObj.AddComponent<CanvasGroup>();
+            dayBannerGroup.alpha = 0f;
+            dayBannerGroup.blocksRaycasts = false;
+            dayBannerGroup.interactable = false;
+
+            GameObject titleObj = new GameObject("Day_Title");
+            titleObj.transform.SetParent(bannerObj.transform, false);
+            RectTransform titleRect = titleObj.AddComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0.5f, 1f);
+            titleRect.anchorMax = new Vector2(0.5f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.anchoredPosition = new Vector2(0f, 0f);
+            titleRect.sizeDelta = new Vector2(580f, 44f);
+
+            dayBannerTitleText = titleObj.AddComponent<TextMeshProUGUI>();
+            dayBannerTitleText.text = "DAY 01";
+            dayBannerTitleText.fontSize = 32f;
+            dayBannerTitleText.fontStyle = FontStyles.Bold;
+            dayBannerTitleText.color = new Color(0.96f, 0.98f, 1f, 1f);
+            dayBannerTitleText.alignment = TextAlignmentOptions.Center;
+
+            GameObject subObj = new GameObject("Day_Subtitle");
+            subObj.transform.SetParent(bannerObj.transform, false);
+            RectTransform subRect = subObj.AddComponent<RectTransform>();
+            subRect.anchorMin = new Vector2(0.5f, 0f);
+            subRect.anchorMax = new Vector2(0.5f, 0f);
+            subRect.pivot = new Vector2(0.5f, 0f);
+            subRect.anchoredPosition = new Vector2(0f, 10f);
+            subRect.sizeDelta = new Vector2(580f, 26f);
+
+            dayBannerSubtitleText = subObj.AddComponent<TextMeshProUGUI>();
+            dayBannerSubtitleText.text = "OPERATION: RECOVERY PROTOCOL";
+            dayBannerSubtitleText.fontSize = 15f;
+            dayBannerSubtitleText.color = new Color(0.75f, 0.78f, 0.85f, 0.9f);
+            dayBannerSubtitleText.alignment = TextAlignmentOptions.Center;
         }
 
         /// <summary>
