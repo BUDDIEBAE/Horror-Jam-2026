@@ -5079,183 +5079,11 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 571503405}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &588346647
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 588346652}
-  - component: {fileID: 588346651}
-  - component: {fileID: 588346650}
-  - component: {fileID: 588346649}
-  - component: {fileID: 588346648}
-  - component: {fileID: 588346653}
-  m_Layer: 0
-  m_Name: Test Oxygen Tank
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &588346648
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588346647}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 988adc66cee687f42808b4890375a94d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpaceHorror.Interaction.MissionInteractable
-  objectiveTitle: Emergency O2 Station
-  actionPrompt: REFILL OXYGEN
-  completionMessage: LIFE SUPPORT RECHARGED +40%
-  objectiveType: 1
-  interactionMethod: 0
-  holdDuration: 1.5
-  isSingleUse: 1
-  oxygenAmount: 40
-  suitRepairAmount: 35
-  dataLogTranscript: 'TRANSMISSION LOG #07:
-
-    ''Deep space anomaly detected near
-    reactor core. Recommend immediate emergency lockdown...'''
-  customAudioLogClip: {fileID: 0}
-  targetObjectToToggle: {fileID: 0}
-  promptAnchor: {fileID: 588346652}
-  promptOffset: {x: 0, y: 0.4, z: 0}
-  outlineWidth: 0.025
-  highlightColor: {r: 0.92, g: 0.95, b: 1, a: 1}
-  pulseOutline: 1
-  visualRenderer: {fileID: 588346650}
-  customOutlineMaterial: {fileID: 0}
-  onInteracted:
-    m_PersistentCalls:
-      m_Calls: []
-  onHoldProgress:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!136 &588346649
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588346647}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5000001
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
---- !u!23 &588346650
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588346647}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 0afe1dccf304f9a499a3416e201062df, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &588346651
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588346647}
-  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &588346652
+--- !u!4 &588346652 stripped
 Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+  m_PrefabInstance: {fileID: 8158768839617777303}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588346647}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.12882785, y: -0.5697111, z: 0.41140923, w: 0.6996964}
-  m_LocalPosition: {x: 40.5, y: 6.7, z: -48.9}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1210402533}
-  m_LocalEulerAnglesHint: {x: 40.47, y: -65.319, z: 34.321}
---- !u!114 &588346653
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588346647}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 05d5d617c7b4fb34e9573ccb9d89c6bb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpaceHorror.Interaction.SignalBeacon
-  channelPreset: 3
-  customOverride: 0
-  beaconTag: O2-STATION
-  telemetryTitle: EMERGENCY O2 DEPOT
-  broadcastFrequencyMHz: 156.8
-  maxRange: 80
-  priority: 3
-  isTransmitting: 1
-  deactiveOnMissionComplete: 1
 --- !u!1 &620908104
 GameObject:
   m_ObjectHideFlags: 0
@@ -5885,183 +5713,33 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 635557373}
   m_CullTransparentMesh: 1
---- !u!1 &638615882
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 638615883}
-  - component: {fileID: 638615886}
-  - component: {fileID: 638615885}
-  - component: {fileID: 638615884}
-  - component: {fileID: 638615887}
-  - component: {fileID: 638615888}
-  m_Layer: 0
-  m_Name: Test Signal Beacon
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &638615883
+--- !u!4 &638615883 stripped
 Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+  m_PrefabInstance: {fileID: 6091697813732475939}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638615882}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.1866567, y: -0.19739246, z: -0.19691855, w: 0.942029}
-  m_LocalPosition: {x: 36.68, y: -6.45, z: -1.56}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 147924886}
-  m_LocalEulerAnglesHint: {x: 15.898, y: -27.589, z: -27.541}
---- !u!136 &638615884
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638615882}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &638615885
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638615882}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &638615886
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638615882}
-  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &638615887
+--- !u!114 &638615887 stripped
 MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 28363459003960605, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+  m_PrefabInstance: {fileID: 6091697813732475939}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638615882}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 988adc66cee687f42808b4890375a94d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpaceHorror.Interaction.MissionInteractable
-  objectiveTitle: Signal Beacon
-  actionPrompt: Repair Beacon
-  completionMessage: 
-  objectiveType: 0
-  interactionMethod: 1
-  holdDuration: 1.5
-  isSingleUse: 1
-  oxygenAmount: 40
-  suitRepairAmount: 35
-  dataLogTranscript: 'TRANSMISSION LOG #07:
-
-    ''Deep space anomaly detected near
-    reactor core. Recommend immediate emergency lockdown...'''
-  customAudioLogClip: {fileID: 0}
-  targetObjectToToggle: {fileID: 0}
-  promptAnchor: {fileID: 0}
-  promptOffset: {x: 0, y: 0.4, z: 0}
-  outlineWidth: 0.025
-  highlightColor: {r: 0.35, g: 0.85, b: 1, a: 1}
-  pulseOutline: 1
-  visualRenderer: {fileID: 0}
-  customOutlineMaterial: {fileID: 0}
-  onInteracted:
-    m_PersistentCalls:
-      m_Calls: []
-  onHoldProgress:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &638615888
+--- !u!114 &638615888 stripped
 MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 644469280273341469, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+  m_PrefabInstance: {fileID: 6091697813732475939}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638615882}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05d5d617c7b4fb34e9573ccb9d89c6bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpaceHorror.Interaction.SignalBeacon
-  channelPreset: 1
-  customOverride: 1
-  beaconTag: Signal Beacon I
-  telemetryTitle: PRIMARY MISSION TARGET
-  broadcastFrequencyMHz: 142.8
-  maxRange: 195
-  priority: 3
-  isTransmitting: 1
-  deactiveOnMissionComplete: 1
 --- !u!1 &671080875
 GameObject:
   m_ObjectHideFlags: 0
@@ -21008,6 +20686,120 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2147365679}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &6091697813732475939
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 147924886}
+    m_Modifications:
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 36.68
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -6.45
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1.56
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.942029
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.1866567
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.19739246
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.19691855
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 15.898
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -27.589
+      objectReference: {fileID: 0}
+    - target: {fileID: 2123707980718084088, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -27.541
+      objectReference: {fileID: 0}
+    - target: {fileID: 7185769136063057396, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+      propertyPath: m_Name
+      value: Test Signal Beacon
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 24f617e6b6085a945b2493ee8d116fdd, type: 3}
+--- !u!1001 &8158768839617777303
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1210402533}
+    m_Modifications:
+    - target: {fileID: 6732646668367330621, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_Name
+      value: Test Oxygen Tank
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 40.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 6.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -48.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.6996964
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.12882785
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.5697111
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.41140923
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 40.47
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -65.319
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497976903200558564, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 34.321
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: f4e7c4f2f05b97f45b008ba5904406aa, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
