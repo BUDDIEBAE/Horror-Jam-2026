@@ -83,11 +83,11 @@ namespace SpaceHorror.UI
         [Tooltip("Renders as crisp overlay on top of screen resolution (recommended for high readability)")]
         [SerializeField] private bool useCrispOverlay = true;
 
-        // Film Noir Visual Palette (Chiaroscuro Silver & Stark Contrast)
-        private readonly Color colNoirWhite = new Color(0.96f, 0.98f, 1.0f, 0.95f);       // Crisp stark white
-        private readonly Color colNoirAshSilver = new Color(0.75f, 0.78f, 0.82f, 0.9f);    // Caution ash-silver
+        // Film Noir Visual Palette (Strict Monochrome Black & White Chiaroscuro)
+        private readonly Color colNoirWhite = new Color(0.98f, 0.98f, 0.98f, 0.95f);       // Crisp stark white
+        private readonly Color colNoirAshSilver = new Color(0.75f, 0.75f, 0.75f, 0.9f);    // Caution ash-silver
         private readonly Color colNoirStarkInvert = new Color(1.0f, 1.0f, 1.0f, 1.0f);     // High-contrast stark white strobe
-        private readonly Color colNoirMutedDim = new Color(0.5f, 0.54f, 0.58f, 0.7f);      // Inactive / Muted grey
+        private readonly Color colNoirMutedDim = new Color(0.5f, 0.5f, 0.5f, 0.7f);        // Inactive / Muted grey
 
         // Runtime states
         private float heartbeatTimer = 0f;
@@ -112,6 +112,7 @@ namespace SpaceHorror.UI
             ApplyCustomAssets();
             EnsureToolsPanelLayout();
             EnsureDirectivePanelLayout();
+            EnsureMonochromeFilmNoirStyling();
         }
 
         private void Awake()
@@ -136,6 +137,7 @@ namespace SpaceHorror.UI
             ApplyCustomAssets();
             EnsureToolsPanelLayout();
             EnsureDirectivePanelLayout();
+            EnsureMonochromeFilmNoirStyling();
         }
 
         private CanvasGroup hudCanvasGroup;
@@ -154,6 +156,66 @@ namespace SpaceHorror.UI
                 }
             }
             hudCanvasGroup.alpha = Mathf.Clamp01(alpha);
+        }
+
+        private Image noirFlashImage;
+
+        /// <summary>
+        /// Triggers a blinding stark white flash across the helmet visor (pure Film Noir Chiaroscuro burst).
+        /// </summary>
+        public void TriggerNoirFlash(float duration = 0.35f)
+        {
+            EnsureNoirFlashOverlay();
+            if (noirFlashImage != null)
+            {
+                StopCoroutine(nameof(RoutineNoirFlash));
+                StartCoroutine(RoutineNoirFlash(duration));
+            }
+        }
+
+        private void EnsureNoirFlashOverlay()
+        {
+            if (noirFlashImage != null) return;
+            if (hudCanvas == null) hudCanvas = GetComponent<Canvas>();
+            if (hudCanvas == null) return;
+
+            Transform existing = hudCanvas.transform.Find("Noir_Flash_Overlay");
+            if (existing != null)
+            {
+                noirFlashImage = existing.GetComponent<Image>();
+                return;
+            }
+
+            GameObject flashObj = new GameObject("Noir_Flash_Overlay");
+            flashObj.transform.SetParent(hudCanvas.transform, false);
+            flashObj.transform.SetAsLastSibling();
+
+            RectTransform rect = flashObj.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            noirFlashImage = flashObj.AddComponent<Image>();
+            noirFlashImage.color = new Color(1f, 1f, 1f, 0f);
+            noirFlashImage.raycastTarget = false;
+        }
+
+        private System.Collections.IEnumerator RoutineNoirFlash(float duration)
+        {
+            if (noirFlashImage == null) yield break;
+
+            noirFlashImage.color = new Color(1f, 1f, 1f, 0.95f);
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                float alpha = Mathf.Lerp(0.95f, 0f, t * t);
+                noirFlashImage.color = new Color(1f, 1f, 1f, alpha);
+                yield return null;
+            }
+            noirFlashImage.color = new Color(1f, 1f, 1f, 0f);
         }
 
         /// <summary>
@@ -248,6 +310,8 @@ namespace SpaceHorror.UI
             {
                 HandleFlashlightToggled(flashlightController.IsLightOn);
             }
+
+            EnsureMonochromeFilmNoirStyling();
         }
 
         private void Update()
@@ -373,11 +437,11 @@ namespace SpaceHorror.UI
                 int integrityPercent = Mathf.RoundToInt(normalizedIntegrity * 100f);
                 if (normalizedIntegrity >= 0.99f)
                 {
-                    suitStatusText.text = "<color=#E2E8F0>SUIT: 100% OK</color>";
+                    suitStatusText.text = "<color=#FFFFFF>SUIT: 100% OK</color>";
                 }
                 else
                 {
-                    suitStatusText.text = $"[!] SUIT LEAK: {integrityPercent}%";
+                    suitStatusText.text = $"<color=#FFFFFF>[!] SUIT LEAK: {integrityPercent}%</color>";
                 }
             }
         }
@@ -389,6 +453,7 @@ namespace SpaceHorror.UI
             {
                 warningAlertText.text = "[!] WARNING: OXYGEN LEVEL CRITICAL";
             }
+            EnsureMonochromeFilmNoirStyling();
         }
 
         private void HandleAsphyxiated()
@@ -399,6 +464,7 @@ namespace SpaceHorror.UI
             {
                 warningAlertText.text = "LIFE SUPPORT TERMINATED\nSYSTEM OFFLINE";
             }
+            EnsureMonochromeFilmNoirStyling();
         }
 
         private void HandleRcsToggled(bool isRcsActive)
@@ -406,9 +472,9 @@ namespace SpaceHorror.UI
             if (rcsStatusText != null)
             {
                 if (isRcsActive)
-                    rcsStatusText.text = "<color=#E2E8F0>RCS: STABILIZED</color>";
+                    rcsStatusText.text = "<color=#FFFFFF>RCS: STABILIZED</color>";
                 else
-                    rcsStatusText.text = "<color=#94A3B8>RCS: DRIFT</color>";
+                    rcsStatusText.text = "<color=#808080>RCS: DRIFT</color>";
             }
         }
 
@@ -419,7 +485,7 @@ namespace SpaceHorror.UI
                 if (isFlashlightOn)
                     lampStatusText.text = "<color=#FFFFFF>LAMP: ON</color>";
                 else
-                    lampStatusText.text = "<color=#64748B>LAMP: OFF</color>";
+                    lampStatusText.text = "<color=#808080>LAMP: OFF</color>";
             }
         }
 
@@ -458,6 +524,99 @@ namespace SpaceHorror.UI
             if (customOxygenIconSprite != null && oxygenIconImage != null)
             {
                 oxygenIconImage.sprite = customOxygenIconSprite;
+            }
+
+            EnsureMonochromeFilmNoirStyling();
+        }
+
+        /// <summary>
+        /// Strictly enforces pure Film Noir monochrome aesthetic (B&W chiaroscuro, 0 color tint)
+        /// across all HUD panels, alert boxes, dividers, and typography.
+        /// </summary>
+        public void EnsureMonochromeFilmNoirStyling()
+        {
+            // 1. Sanitize Warning Alert Panel (Monochrome pure black box with stark white text)
+            if (warningAlertGroup != null)
+            {
+                Image[] warnImages = warningAlertGroup.GetComponentsInChildren<Image>(true);
+                foreach (var img in warnImages)
+                {
+                    if (img.gameObject.name.Contains("BG"))
+                    {
+                        img.color = new Color(0.02f, 0.02f, 0.02f, 0.95f);
+                    }
+                    else if (img.gameObject.name.Contains("Border"))
+                    {
+                        img.color = new Color(1f, 1f, 1f, 0.95f);
+                    }
+                }
+            }
+
+            if (warningAlertText != null)
+            {
+                warningAlertText.color = Color.white;
+            }
+
+            // 2. Sanitize Tools Telemetry Panel (RCS & Lamp)
+            if (rcsStatusText != null)
+            {
+                rcsStatusText.color = Color.white;
+                Transform panel = rcsStatusText.transform.parent;
+                if (panel != null)
+                {
+                    Image bg = panel.Find("Top_BG")?.GetComponent<Image>();
+                    if (bg != null) bg.color = new Color(0.02f, 0.02f, 0.02f, 0.90f);
+
+                    Image div = panel.Find("Top_Divider")?.GetComponent<Image>();
+                    if (div != null) div.color = new Color(0.65f, 0.65f, 0.65f, 0.40f);
+                }
+            }
+
+            if (lampStatusText != null)
+            {
+                lampStatusText.color = Color.white;
+            }
+
+            // 3. Sanitize LifeSupport & Biometrics panels
+            if (oxygenValueText != null && oxygenValueText.transform.parent != null)
+            {
+                Transform lsPanel = oxygenValueText.transform.parent;
+                Image lsBg = lsPanel.Find("LifeSupport_BG")?.GetComponent<Image>();
+                if (lsBg != null) lsBg.color = new Color(0.02f, 0.02f, 0.02f, 0.90f);
+
+                Image accent = lsPanel.Find("Accent_Bar")?.GetComponent<Image>();
+                if (accent != null) accent.color = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+            }
+
+            if (heartRateText != null && heartRateText.transform.parent != null)
+            {
+                Transform bioPanel = heartRateText.transform.parent;
+                Image bioBg = bioPanel.Find("Biometrics_BG")?.GetComponent<Image>();
+                if (bioBg != null) bioBg.color = new Color(0.02f, 0.02f, 0.02f, 0.90f);
+
+                Image accent = bioPanel.Find("Accent_Bar")?.GetComponent<Image>();
+                if (accent != null) accent.color = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+            }
+
+            // 4. Sanitize Interaction & Transmission panels
+            if (interactionPromptGroup != null)
+            {
+                Image bg = interactionPromptGroup.transform.Find("Interact_BG")?.GetComponent<Image>();
+                if (bg != null) bg.color = new Color(0.02f, 0.02f, 0.02f, 0.90f);
+
+                Image accent = interactionPromptGroup.transform.Find("Interact_Accent")?.GetComponent<Image>();
+                if (accent != null) accent.color = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+
+                if (interactionSubtext != null) interactionSubtext.color = new Color(0.72f, 0.72f, 0.72f, 0.85f);
+            }
+
+            if (transmissionLogGroup != null)
+            {
+                Image bg = transmissionLogGroup.transform.Find("Transmission_BG")?.GetComponent<Image>();
+                if (bg != null) bg.color = new Color(0.02f, 0.02f, 0.02f, 0.92f);
+
+                Image bar = transmissionLogGroup.transform.Find("Transmission_TopBar")?.GetComponent<Image>();
+                if (bar != null) bar.color = new Color(0.90f, 0.90f, 0.90f, 0.95f);
             }
         }
 
@@ -584,12 +743,15 @@ namespace SpaceHorror.UI
 
         /// <summary>
         /// Updates the Objective Card with structured bullet points and visual progress indicators (matching Paint layout).
-        /// Supports individual completedStates for multi-objective contracts.
+        /// Supports individual completedStates for multi-objective contracts and optional header override.
         /// </summary>
-        public void SetObjectiveChecklist(int dayNumber, string[] tasks, bool[] completedStates, int activeTaskIndex = -1)
+        public void SetObjectiveChecklist(int dayNumber, string[] tasks, bool[] completedStates, int activeTaskIndex = -1, string dayHeaderOverride = null)
         {
             EnsureDirectivePanelLayout();
-            if (directiveDayText != null) directiveDayText.text = $"DAY {dayNumber}";
+            if (directiveDayText != null)
+            {
+                directiveDayText.text = !string.IsNullOrEmpty(dayHeaderOverride) ? dayHeaderOverride : $"DAY {dayNumber}";
+            }
 
             if (directiveMessageText != null && tasks != null)
             {
@@ -601,8 +763,8 @@ namespace SpaceHorror.UI
 
                     if (isDone)
                     {
-                        // Completed task: Dimmed struck-through silver with [DONE] tag
-                        sb.AppendLine($"<color=#64748B>- <s>{tasks[i]}</s>  <size=10>[DONE]</size></color>");
+                        // Completed task: Dimmed struck-through neutral charcoal with [DONE] tag
+                        sb.AppendLine($"<color=#606060>- <s>{tasks[i]}</s>  <size=10>[DONE]</size></color>");
                     }
                     else if (isActive)
                     {
@@ -611,8 +773,8 @@ namespace SpaceHorror.UI
                     }
                     else
                     {
-                        // Upcoming pending task: Subtle muted silver
-                        sb.AppendLine($"<color=#94A3B8>- {tasks[i]}</color>");
+                        // Upcoming pending task: Subtle neutral ash-silver
+                        sb.AppendLine($"<color=#808080>- {tasks[i]}</color>");
                     }
                 }
                 directiveMessageText.text = sb.ToString().TrimEnd();
@@ -726,7 +888,7 @@ namespace SpaceHorror.UI
             directiveDayText.text = "DAY 1";
             directiveDayText.fontSize = 24f;
             directiveDayText.fontStyle = FontStyles.Bold;
-            directiveDayText.color = new Color(0.96f, 0.98f, 1f, 1f);
+            directiveDayText.color = new Color(1f, 1f, 1f, 1f);
             directiveDayText.alignment = TextAlignmentOptions.Left;
 
             // 2. The Box Frame (White Outline Border, 2px)
@@ -740,7 +902,7 @@ namespace SpaceHorror.UI
             frameRect.offsetMax = new Vector2(0f, -34f); // Sits right below DAY 1
 
             Image frameBorder = boxFrameObj.AddComponent<Image>();
-            frameBorder.color = new Color(0.96f, 0.98f, 1f, 1f); // Stark Crisp White Border
+            frameBorder.color = new Color(1f, 1f, 1f, 1f); // Stark Crisp White Border
 
             // 3. Inner Box (Obsidian Dark Background inset by 2px to leave crisp border)
             GameObject boxInnerObj = new GameObject("Box_Inner");
@@ -752,7 +914,7 @@ namespace SpaceHorror.UI
             innerRect.offsetMax = new Vector2(-2f, -2f);
 
             Image innerBg = boxInnerObj.AddComponent<Image>();
-            innerBg.color = new Color(0.02f, 0.025f, 0.035f, 0.92f); // Deep Obsidian Backing
+            innerBg.color = new Color(0.02f, 0.02f, 0.02f, 0.95f); // Deep Obsidian Backing
 
             // 4. "OBJECTIVE" Header inside Box
             GameObject objHeader = new GameObject("Objective_Header_Text");
@@ -769,7 +931,7 @@ namespace SpaceHorror.UI
             headerText.fontSize = 16f;
             headerText.fontStyle = FontStyles.Bold;
             headerText.characterSpacing = 2.0f;
-            headerText.color = new Color(0.96f, 0.98f, 1f, 1f);
+            headerText.color = new Color(1f, 1f, 1f, 1f);
             headerText.alignment = TextAlignmentOptions.Left;
 
             // 5. Divider Line under OBJECTIVE
@@ -783,7 +945,7 @@ namespace SpaceHorror.UI
             divRect.sizeDelta = new Vector2(-28f, 1.5f);
 
             Image divImg = divObj.AddComponent<Image>();
-            divImg.color = new Color(0.65f, 0.70f, 0.78f, 0.40f);
+            divImg.color = new Color(0.70f, 0.70f, 0.70f, 0.40f);
 
             // 6. Objective List Text (Bullet points with auto-wrapping)
             GameObject listObj = new GameObject("Objective_List_Text");
@@ -799,7 +961,7 @@ namespace SpaceHorror.UI
             directiveMessageText.text = "- Access Ship Mission Terminal\n- Salvage Satellite Log (142.8 MHz)\n- Return to Ship Airlock (121.5 MHz)";
             directiveMessageText.fontSize = 13.5f;
             directiveMessageText.lineSpacing = 8f;
-            directiveMessageText.color = new Color(0.88f, 0.90f, 0.94f, 0.95f);
+            directiveMessageText.color = new Color(0.92f, 0.92f, 0.92f, 0.95f);
             directiveMessageText.alignment = TextAlignmentOptions.TopLeft;
             directiveMessageText.textWrappingMode = TextWrappingModes.Normal;
             directiveMessageText.overflowMode = TextOverflowModes.Overflow;

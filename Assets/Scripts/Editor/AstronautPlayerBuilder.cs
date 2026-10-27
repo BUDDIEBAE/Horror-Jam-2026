@@ -61,6 +61,11 @@ namespace SpaceHorror.Editor
             AstronautInputHandler inputHandler = player.AddComponent<AstronautInputHandler>();
             AstronautMovement6D movement = player.AddComponent<AstronautMovement6D>();
             AstronautSurvival survival = player.AddComponent<AstronautSurvival>();
+            GameObject corpsePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Astronaut Dead Body.prefab");
+            if (corpsePrefab != null)
+            {
+                survival.CorpsePrefab = corpsePrefab;
+            }
             AstronautAudioSystem audioSystem = player.AddComponent<AstronautAudioSystem>();
             AstronautInteraction interaction = player.AddComponent<AstronautInteraction>();
             AstronautSignalTracker signalTracker = player.AddComponent<AstronautSignalTracker>();
@@ -432,7 +437,7 @@ namespace SpaceHorror.Editor
             // 6. Create Subtle Visor Curvature Vignette
             // 6. Create Subtle Visor Curvature Vignette (Noir Shadow Lens)
             Image visorFrameImg = CreateImage(canvasObj.transform, "Visor_Curved_Frame", vignetteSprite,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.01f, 0.015f, 0.02f, 0.40f));
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.015f, 0.015f, 0.015f, 0.40f));
 
             // 7. Tools Telemetry Pod (RCS & Lamp) - Positioned in Top-Right corner to leave Center-Top clear for Signal Tracker
             GameObject topGroup = new GameObject("Top_Telemetry_Panel");
@@ -446,15 +451,15 @@ namespace SpaceHorror.Editor
 
             // Dark Film Noir obsidian backing pod
             CreateImage(topGroup.transform, "Top_BG", flatWhiteSprite,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.03f, 0.03f, 0.04f, 0.88f));
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.02f, 0.02f, 0.90f));
 
             // Silver center divider
             CreateImage(topGroup.transform, "Top_Divider", flatWhiteSprite,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(2f, -10f), new Color(0.6f, 0.65f, 0.7f, 0.4f));
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(2f, -10f), new Color(0.65f, 0.65f, 0.65f, 0.40f));
 
             TMP_Text rcsText = CreateTMPText(topGroup.transform, "RCS_Status_Text", "RCS: STABILIZED",
                 new Vector2(0.5f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-15f, 0f), new Vector2(140f, 24f), 14f,
-                TextAlignmentOptions.Right, new Color(0.92f, 0.94f, 0.96f, 0.95f));
+                TextAlignmentOptions.Right, new Color(1f, 1f, 1f, 0.95f));
 
             TMP_Text lampText = CreateTMPText(topGroup.transform, "Lamp_Status_Text", "LAMP: ON",
                 new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(15f, 0f), new Vector2(140f, 24f), 14f,
@@ -472,30 +477,30 @@ namespace SpaceHorror.Editor
 
             // Dark Film Noir obsidian backing pod
             CreateImage(lifeSupportGroup.transform, "LifeSupport_BG", flatWhiteSprite,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.03f, 0.03f, 0.04f, 0.88f));
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.02f, 0.02f, 0.90f));
 
             // Silver accent bar
             CreateImage(lifeSupportGroup.transform, "Accent_Bar", flatWhiteSprite,
-                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(4f, 0f), new Color(0.92f, 0.94f, 0.96f, 0.95f));
+                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(4f, 0f), new Color(0.95f, 0.95f, 0.95f, 0.95f));
 
             TMP_Text o2Text = CreateTMPText(lifeSupportGroup.transform, "Oxygen_Value_Text", "O2: 100%",
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -14f), new Vector2(295f, 26f), 20f,
-                TextAlignmentOptions.Left, new Color(0.95f, 0.97f, 1f, 0.95f));
+                TextAlignmentOptions.Left, new Color(1f, 1f, 1f, 0.95f));
 
             Image o2BarBG = CreateImage(lifeSupportGroup.transform, "Oxygen_Bar_BG", flatWhiteSprite,
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -48f), new Vector2(295f, 14f),
-                new Color(0.12f, 0.13f, 0.15f, 0.95f));
+                new Color(0.12f, 0.12f, 0.12f, 0.95f));
 
             Image o2BarFill = CreateImage(o2BarBG.transform, "Oxygen_Bar_Fill", flatWhiteSprite,
                 Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero,
-                new Color(0.95f, 0.97f, 1f, 0.95f), Image.Type.Filled);
+                new Color(1f, 1f, 1f, 0.95f), Image.Type.Filled);
             o2BarFill.fillMethod = Image.FillMethod.Horizontal;
             o2BarFill.fillOrigin = 0;
             o2BarFill.fillAmount = 1f;
 
             TMP_Text suitText = CreateTMPText(lifeSupportGroup.transform, "Suit_Status_Text", "SUIT: 100% OK",
                 new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(22f, 14f), new Vector2(295f, 22f), 16f,
-                TextAlignmentOptions.Left, new Color(0.85f, 0.88f, 0.92f, 0.9f));
+                TextAlignmentOptions.Left, new Color(0.90f, 0.90f, 0.90f, 0.90f));
 
             // 9. Bottom-Right Biometrics Pod (Heartbeat & BPM)
             GameObject biometricsGroup = new GameObject("Biometrics_Panel");
@@ -509,21 +514,21 @@ namespace SpaceHorror.Editor
 
             // Dark Film Noir obsidian backing pod
             CreateImage(biometricsGroup.transform, "Biometrics_BG", flatWhiteSprite,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.03f, 0.03f, 0.04f, 0.88f));
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.02f, 0.02f, 0.90f));
 
             // Silver accent bar
             CreateImage(biometricsGroup.transform, "Accent_Bar", flatWhiteSprite,
-                new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(4f, 0f), new Color(0.92f, 0.94f, 0.96f, 0.95f));
+                new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(4f, 0f), new Color(0.95f, 0.95f, 0.95f, 0.95f));
 
             Image heartImg = CreateImage(biometricsGroup.transform, "Heart_Icon", heartSprite,
                 new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 0f), new Vector2(28f, 28f),
-                new Color(0.95f, 0.97f, 1f, 0.95f));
+                new Color(1f, 1f, 1f, 0.95f));
 
             TMP_Text heartText = CreateTMPText(biometricsGroup.transform, "HeartRate_Text", "72 BPM",
                 new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(65f, 0f), new Vector2(150f, 32f), 24f,
-                TextAlignmentOptions.Left, new Color(0.95f, 0.97f, 1f, 0.95f));
+                TextAlignmentOptions.Left, new Color(1f, 1f, 1f, 0.95f));
 
-            // 10. Warning Alert Panel (Center Screen)
+            // 10. Warning Alert Panel (Center Screen) - Film Noir Monochrome
             GameObject warningObj = new GameObject("Warning_Alert_Panel");
             warningObj.transform.SetParent(canvasObj.transform, false);
             RectTransform warnRect = warningObj.AddComponent<RectTransform>();
@@ -536,13 +541,13 @@ namespace SpaceHorror.Editor
             CanvasGroup warnGroup = warningObj.AddComponent<CanvasGroup>();
             warnGroup.alpha = 0f;
 
-            // Warning dark red backing pod
+            // Pure pitch black backing pod
             CreateImage(warningObj.transform, "Warning_BG", flatWhiteSprite,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.25f, 0.02f, 0.04f, 0.92f));
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.02f, 0.02f, 0.95f));
 
             TMP_Text warnText = CreateTMPText(warningObj.transform, "Warning_Text", "[!] WARNING: OXYGEN LEVEL CRITICAL",
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(600f, 44f), 22f,
-                TextAlignmentOptions.Center, new Color(1f, 0.22f, 0.25f, 1f));
+                TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 1f));
 
             // 11. Interaction Prompt Pod (Center-Bottom Reticle Pod)
             GameObject interactObj = new GameObject("Interaction_Prompt_Panel");
@@ -559,11 +564,11 @@ namespace SpaceHorror.Editor
 
             // Dark Film Noir obsidian backing pod
             CreateImage(interactObj.transform, "Interact_BG", flatWhiteSprite,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.025f, 0.03f, 0.90f));
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.02f, 0.02f, 0.90f));
 
             // Silver left accent line
             CreateImage(interactObj.transform, "Interact_Accent", flatWhiteSprite,
-                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(3f, 0f), new Color(0.92f, 0.94f, 0.96f, 0.95f));
+                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(3f, 0f), new Color(0.95f, 0.95f, 0.95f, 0.95f));
 
             TMP_Text interactPromptText = CreateTMPText(interactObj.transform, "Prompt_Text", "[LMB] REPAIR OXYGEN LINE (HOLD)",
                 new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(16f, 8f), new Vector2(350f, 26f), 17f,
@@ -571,12 +576,12 @@ namespace SpaceHorror.Editor
 
             TMP_Text interactSubtext = CreateTMPText(interactObj.transform, "Sub_Text", "PRIMARY O2 LIFE SUPPORT",
                 new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(16f, -14f), new Vector2(350f, 20f), 12f,
-                TextAlignmentOptions.Left, new Color(0.68f, 0.72f, 0.78f, 0.85f));
+                TextAlignmentOptions.Left, new Color(0.72f, 0.72f, 0.72f, 0.85f));
 
             // Progress bar
             Image interactBarBG = CreateImage(interactObj.transform, "Progress_Bar_BG", flatWhiteSprite,
                 new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 0f), new Vector2(0f, 4f),
-                new Color(0.12f, 0.13f, 0.15f, 0.95f));
+                new Color(0.12f, 0.12f, 0.12f, 0.95f));
 
             Image interactBarFill = CreateImage(interactBarBG.transform, "Progress_Bar_Fill", flatWhiteSprite,
                 Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero,
@@ -601,7 +606,7 @@ namespace SpaceHorror.Editor
 
             TMP_Text statusMsgText = CreateTMPText(statusObj.transform, "Status_Text", "[+] OXYGEN REFILLED +40%",
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(460f, 32f), 19f,
-                TextAlignmentOptions.Center, new Color(0.96f, 0.98f, 1f, 1f));
+                TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 1f));
 
             // 13. Mission Transmission / Audio Log Popup (Center-Top)
             GameObject transObj = new GameObject("Transmission_Log_Panel");
@@ -617,18 +622,18 @@ namespace SpaceHorror.Editor
             transGroup.alpha = 0f;
 
             CreateImage(transObj.transform, "Transmission_BG", flatWhiteSprite,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.025f, 0.03f, 0.92f));
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.02f, 0.02f, 0.92f));
 
             CreateImage(transObj.transform, "Transmission_TopBar", flatWhiteSprite,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 3f), new Color(0.85f, 0.88f, 0.92f, 0.95f));
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 3f), new Color(0.90f, 0.90f, 0.90f, 0.95f));
 
             TMP_Text transTitleText = CreateTMPText(transObj.transform, "Title_Text", ">> INCOMING TRANSMISSION LOG",
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -14f), new Vector2(520f, 24f), 16f,
-                TextAlignmentOptions.Left, new Color(0.96f, 0.98f, 1f, 1f));
+                TextAlignmentOptions.Left, new Color(1f, 1f, 1f, 1f));
 
             TMP_Text transBodyText = CreateTMPText(transObj.transform, "Body_Text", "Transcript text here...",
                 new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(18f, 14f), new Vector2(520f, 65f), 14f,
-                TextAlignmentOptions.Left, new Color(0.85f, 0.88f, 0.92f, 0.95f));
+                TextAlignmentOptions.Left, new Color(0.88f, 0.88f, 0.88f, 0.95f));
 
             // 14. Attach AstronautHelmetHUD script and wire bindings
             AstronautHelmetHUD hud = canvasObj.AddComponent<AstronautHelmetHUD>();

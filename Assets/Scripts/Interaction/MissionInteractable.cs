@@ -52,6 +52,13 @@ namespace SpaceHorror.Interaction
         [Tooltip("Can this objective only be completed once, or repeatedly?")]
         [SerializeField] private bool isSingleUse = true;
 
+        [Header("Loop & Day Regeneration")]
+        [Tooltip("Automatically resets this interactable when starting a fresh expedition day (normal completion / sleep)")]
+        [SerializeField] private bool resetOnNewDay = true;
+
+        [Tooltip("Automatically resets this interactable when reviving from death in a loop cycle (corpse recovery)")]
+        [SerializeField] private bool resetOnLoop = true;
+
         [Header("Objective Type Parameters")]
         [Tooltip("Amount of oxygen restored (if RefillOxygen)")]
         [Range(5f, 100f)]
@@ -97,10 +104,10 @@ namespace SpaceHorror.Interaction
 
         [Header("Designer Callbacks (Unity Events)")]
         [Tooltip("Fires when the interaction successfully completes")]
-        public UnityEvent<GameObject> onInteracted;
+        public UnityEvent<GameObject> onInteracted = new UnityEvent<GameObject>();
 
         [Tooltip("Fires each frame during hold interaction with progress (0.0 to 1.0)")]
-        public UnityEvent<float> onHoldProgress;
+        public UnityEvent<float> onHoldProgress = new UnityEvent<float>();
 
         // Runtime states
         private bool isCompleted = false;
@@ -119,13 +126,13 @@ namespace SpaceHorror.Interaction
         private static readonly int PropOutlineColor = Shader.PropertyToID("_OutlineColor");
         private static readonly int PropOutlineWidth = Shader.PropertyToID("_OutlineWidth");
 
-        // Getters
+        // Getters & Setters
         public string ObjectiveTitle => objectiveTitle;
         public string ActionPrompt => actionPrompt;
         public string CompletionMessage => completionMessage;
-        public ObjectiveType Type => objectiveType;
-        public InteractionMethod Method => interactionMethod;
-        public float HoldDuration => holdDuration;
+        public ObjectiveType Type { get => objectiveType; set => objectiveType = value; }
+        public InteractionMethod Method { get => interactionMethod; set => interactionMethod = value; }
+        public float HoldDuration { get => holdDuration; set => holdDuration = value; }
         public bool IsSingleUse
         {
             get => isSingleUse;
@@ -133,6 +140,8 @@ namespace SpaceHorror.Interaction
         }
         public bool IsCompleted => isCompleted;
         public bool CanInteract => !isCompleted || !isSingleUse;
+        public bool ResetOnNewDay { get => resetOnNewDay; set => resetOnNewDay = value; }
+        public bool ResetOnLoop { get => resetOnLoop; set => resetOnLoop = value; }
         public string DataLogTranscript => dataLogTranscript;
         public AudioClip AudioLogClip => customAudioLogClip;
 
@@ -147,6 +156,16 @@ namespace SpaceHorror.Interaction
             {
                 completionMessage = completionMsg;
             }
+        }
+
+        /// <summary>
+        /// Configures interaction behavior and duration dynamically at runtime.
+        /// </summary>
+        public void ConfigureInteractionMethod(InteractionMethod method, float duration = 1.5f, ObjectiveType type = ObjectiveType.Custom)
+        {
+            interactionMethod = method;
+            holdDuration = duration;
+            objectiveType = type;
         }
 
         private static Material GetOrCreateOutlineMaterial()
@@ -184,6 +203,8 @@ namespace SpaceHorror.Interaction
 
         private void Awake()
         {
+            if (onInteracted == null) onInteracted = new UnityEvent<GameObject>();
+            if (onHoldProgress == null) onHoldProgress = new UnityEvent<float>();
             propBlock = new MaterialPropertyBlock();
 
             if (visualRenderer != null)
@@ -454,6 +475,7 @@ namespace SpaceHorror.Interaction
         public void ResetObjective()
         {
             isCompleted = false;
+            SetHighlight(false);
 
             SignalBeacon beacon = GetComponent<SignalBeacon>();
             if (beacon != null)

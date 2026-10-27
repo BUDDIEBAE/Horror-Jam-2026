@@ -388,6 +388,8 @@ namespace SpaceHorror.Audio
         /// </summary>
         public void TriggerWakeUpGasp()
         {
+            isAsphyxiated = false;
+
             if (activeWakeUpGaspClip != null && breathingSource != null)
             {
                 breathingSource.pitch = UnityEngine.Random.Range(0.96f, 1.04f);

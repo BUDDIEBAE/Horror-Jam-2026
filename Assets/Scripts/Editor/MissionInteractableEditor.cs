@@ -23,6 +23,8 @@ namespace SpaceHorror.Editor
         private SerializedProperty propMethod;
         private SerializedProperty propHoldDuration;
         private SerializedProperty propSingleUse;
+        private SerializedProperty propResetOnNewDay;
+        private SerializedProperty propResetOnLoop;
 
         // 3. Objective-Specific Parameters
         private SerializedProperty propOxygen;
@@ -56,6 +58,8 @@ namespace SpaceHorror.Editor
             propMethod = serializedObject.FindProperty("interactionMethod");
             propHoldDuration = serializedObject.FindProperty("holdDuration");
             propSingleUse = serializedObject.FindProperty("isSingleUse");
+            propResetOnNewDay = serializedObject.FindProperty("resetOnNewDay");
+            propResetOnLoop = serializedObject.FindProperty("resetOnLoop");
 
             // Type parameters
             propOxygen = serializedObject.FindProperty("oxygenAmount");
@@ -104,6 +108,14 @@ namespace SpaceHorror.Editor
             }
 
             EditorGUILayout.PropertyField(propSingleUse, new GUIContent("Is Single Use", "If true, interactable completes once, immediately extinguishes its outline, and ignores future targeting"));
+
+            if (propSingleUse.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(propResetOnNewDay, new GUIContent("Reset On New Day", "Automatically resets this interactable when starting a fresh expedition day (normal completion / sleep)"));
+                EditorGUILayout.PropertyField(propResetOnLoop, new GUIContent("Reset On Loop", "Automatically resets this interactable when reviving from death in a loop cycle (corpse recovery)"));
+                EditorGUI.indentLevel--;
+            }
             EditorGUILayout.Space(6);
 
             // --- 3. Dynamic Objective Parameters ---

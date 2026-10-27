@@ -31,6 +31,19 @@ namespace SpaceHorror.Player
         [Range(10f, 40f)]
         [SerializeField] private float criticalOxygenThreshold = 25f;
 
+        [Header("Death & Corpse Simulation")]
+        [Tooltip("Corpse prefab instantiated when astronaut asphyxiates / runs out of oxygen")]
+        [SerializeField] private GameObject corpsePrefab;
+
+        [Tooltip("Inherit player linear and angular velocity onto the corpse in Zero-G")]
+        [SerializeField] private bool inheritVelocityOnDeath = true;
+
+        [Tooltip("Optional subtle tumble impulse (angular velocity) added to corpse upon death in zero-g")]
+        [SerializeField] private float deathTumbleImpulse = 0.25f;
+
+        [Tooltip("Ensure spawned corpses persist permanently in space across all loop cycles and scene reloads (Loop horror aesthetic)")]
+        [SerializeField] private bool persistCorpsesForever = true;
+
         [Header("Suit Integrity & Debris Damage")]
         [Tooltip("Current suit pressure / hull integrity (100 = perfectly sealed)")]
         [SerializeField] private float currentSuitIntegrity = 100f;
@@ -58,11 +71,13 @@ namespace SpaceHorror.Player
         private AstronautMovement6D movementController;
         private AstronautInputHandler inputHandler;
         private AstronautCameraRig cameraRig;
+        private Rigidbody playerRigidbody;
 
         // Internal States
         private bool wasCriticalAlarmActive = false;
         private bool isAsphyxiated = false;
         private float acuteStressSpike = 0f;
+        private GameObject lastSpawnedCorpse;
 
         // Public Events for HUD, Audio & Gameplay
         public event Action<float> OnOxygenChanged;             // 0.0 to 1.0 (normalized)
@@ -70,6 +85,7 @@ namespace SpaceHorror.Player
         public event Action<float> OnSuitIntegrityChanged;      // 0.0 to 1.0 (normalized)
         public event Action<bool> OnLowOxygenWarning;           // isCritical (true when < 25%)
         public event Action OnPlayerAsphyxiated;                // Death event (0% O2)
+        public event Action<GameObject> OnPlayerCorpseSpawned;  // Corpse instantiated event
         public event Action<float> OnSuitPunctured;             // Damage amount taken
 
         // Public Getters
@@ -82,12 +98,30 @@ namespace SpaceHorror.Player
         public bool IsOxygenCritical => (currentOxygen / maxOxygen) <= (criticalOxygenThreshold / 100f);
         public bool IsAsphyxiated => isAsphyxiated;
         public bool HasSuitPuncture => currentSuitIntegrity < 99.9f;
+        public GameObject CorpsePrefab { get => corpsePrefab; set => corpsePrefab = value; }
+        public GameObject LastSpawnedCorpse => lastSpawnedCorpse;
+        public bool PersistCorpsesForever { get => persistCorpsesForever; set => persistCorpsesForever = value; }
+
+        private static readonly System.Collections.Generic.List<GameObject> allPersistentCorpses = new System.Collections.Generic.List<GameObject>();
+        public static System.Collections.Generic.IReadOnlyList<GameObject> AllPersistentCorpses => allPersistentCorpses;
+        public static int TotalCorpsesDriftingInSpace => allPersistentCorpses.Count;
+
+#if UNITY_EDITOR
+        private void Reset()
+        {
+            if (corpsePrefab == null)
+            {
+                corpsePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Astronaut Dead Body.prefab");
+            }
+        }
+#endif
 
         private void Awake()
         {
             movementController = GetComponent<AstronautMovement6D>();
             inputHandler = GetComponent<AstronautInputHandler>();
             cameraRig = GetComponentInChildren<AstronautCameraRig>();
+            playerRigidbody = GetComponent<Rigidbody>();
 
             currentOxygen = maxOxygen;
             currentSuitIntegrity = 100f;
@@ -163,10 +197,7 @@ namespace SpaceHorror.Player
             // 5. Total Asphyxiation Check
             if (currentOxygen <= 0f && !isAsphyxiated)
             {
-                isAsphyxiated = true;
-                currentOxygen = 0f;
-                OnPlayerAsphyxiated?.Invoke();
-                Debug.LogWarning("<color=#FF3344><b>[Life Support Alert]</b></color> Astronaut oxygen fully depleted! Life support offline.");
+                TriggerAsphyxiation();
             }
         }
 
@@ -266,11 +297,152 @@ namespace SpaceHorror.Player
         }
 
         /// <summary>
+        /// Scripted event method: Directly sets suit integrity to a specific percentage (e.g. catastrophic rupture).
+        /// </summary>
+        public void ForceSuitIntegrity(float targetIntegrityPercent, bool triggerSpike = true)
+        {
+            currentSuitIntegrity = Mathf.Clamp(targetIntegrityPercent, 0f, 100f);
+            OnSuitIntegrityChanged?.Invoke(CurrentSuitIntegrityNormalized);
+            OnSuitPunctured?.Invoke(Mathf.Max(0f, 100f - currentSuitIntegrity));
+            if (triggerSpike)
+            {
+                TriggerHeartSpike(45f);
+            }
+        }
+
+        /// <summary>
         /// Spikes astronaut heart rate instantly (e.g. cosmic horror jump scare, anomaly detection).
         /// </summary>
         public void TriggerHeartSpike(float bpmSpike)
         {
             acuteStressSpike = Mathf.Clamp(acuteStressSpike + bpmSpike, 0f, 80f);
+        }
+
+        /// <summary>
+        /// Forces immediate player asphyxiation death, instantiating the corpse and invoking death events.
+        /// </summary>
+        public void TriggerAsphyxiation()
+        {
+            if (isAsphyxiated) return;
+
+            currentOxygen = 0f;
+            isAsphyxiated = true;
+            OnOxygenChanged?.Invoke(0f);
+            SpawnCorpse();
+            OnPlayerAsphyxiated?.Invoke();
+
+            if (SpaceHorror.Gameplay.DayCycleManager.Instance != null)
+            {
+                SpaceHorror.Gameplay.DayCycleManager.Instance.NotifyPlayerAsphyxiated();
+            }
+            else
+            {
+                StartCoroutine(EmergencyRespawnFallback());
+            }
+
+            Debug.LogWarning("<color=#FF3344><b>[Life Support Alert]</b></color> Astronaut oxygen fully depleted! Life support offline.");
+        }
+
+        private System.Collections.IEnumerator EmergencyRespawnFallback()
+        {
+            yield return new WaitForSeconds(1.5f);
+            ReplenishOxygen(maxOxygen);
+            RepairSuit(100f);
+
+            GameObject sp = GameObject.Find("Spawn Point");
+            if (sp == null) sp = GameObject.Find("Spawnpoint");
+            if (sp == null) sp = GameObject.Find("SpawnPoint");
+
+            if (sp != null)
+            {
+                transform.position = sp.transform.position;
+                transform.rotation = sp.transform.rotation;
+                if (playerRigidbody != null)
+                {
+                    playerRigidbody.linearVelocity = Vector3.zero;
+                    playerRigidbody.angularVelocity = Vector3.zero;
+                    playerRigidbody.position = sp.transform.position;
+                    playerRigidbody.rotation = sp.transform.rotation;
+                }
+                Physics.SyncTransforms();
+            }
+
+            var wakeUp = GetComponent<AstronautWakeUpTransition>();
+            if (wakeUp != null)
+            {
+                wakeUp.TriggerWakeUp();
+            }
+            else
+            {
+                var input = GetComponent<AstronautInputHandler>();
+                if (input != null) input.InputEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// Instantiates the player's corpse in the world at the current death position and rotation.
+        /// The corpse persists permanently in space across all future loops without ever being cleared.
+        /// Transfers linear and angular momentum to the corpse if configured.
+        /// </summary>
+        public GameObject SpawnCorpse()
+        {
+            if (corpsePrefab == null)
+            {
+                Debug.LogWarning("<color=#FF3344><b>[AstronautSurvival]</b></color> Corpse Prefab is not assigned! Unable to instantiate player corpse.");
+                return null;
+            }
+
+            GameObject corpse = Instantiate(corpsePrefab, transform.position, transform.rotation);
+            int loopNumber = SpaceHorror.Gameplay.DayCycleManager.Instance != null ? SpaceHorror.Gameplay.DayCycleManager.Instance.CurrentDay : 1;
+            int deathCount = allPersistentCorpses.Count + 1;
+            corpse.name = $"Astronaut Corpse (Loop Day {loopNumber:D2} - Body #{deathCount})";
+            lastSpawnedCorpse = corpse;
+            allPersistentCorpses.Add(corpse);
+
+            if (persistCorpsesForever)
+            {
+                // Ensure corpse is never cleared by Unity scene transitions or loop resets
+                DontDestroyOnLoad(corpse);
+            }
+
+            Rigidbody corpseRb = corpse.GetComponent<Rigidbody>();
+            if (corpseRb != null)
+            {
+                if (inheritVelocityOnDeath && playerRigidbody != null)
+                {
+                    corpseRb.linearVelocity = playerRigidbody.linearVelocity;
+                    corpseRb.angularVelocity = playerRigidbody.angularVelocity;
+                }
+
+                // Apply a subtle zero-g tumble drift so the lifeless body floats eerily in space
+                if (deathTumbleImpulse > 0f)
+                {
+                    Vector3 randomTorque = UnityEngine.Random.insideUnitSphere * deathTumbleImpulse;
+                    corpseRb.AddTorque(randomTorque, ForceMode.Impulse);
+                }
+            }
+
+            // Setup Interactive Corpse Recovery & Telemetry Collection
+            try
+            {
+                var recovery = corpse.GetComponent<SpaceHorror.Interaction.FallenAstronautRecovery>();
+                if (recovery == null)
+                {
+                    recovery = corpse.AddComponent<SpaceHorror.Interaction.FallenAstronautRecovery>();
+                }
+                if (recovery != null)
+                {
+                    recovery.Initialize(loopNumber, deathCount);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"<color=#FF5555>[AstronautSurvival]</color> Error initializing corpse recovery: {ex.Message}");
+            }
+
+            OnPlayerCorpseSpawned?.Invoke(corpse);
+            Debug.Log($"<color=#FF4444><b>[Loop Cycle]</b></color> Persistent corpse spawned in space: '{corpse.name}' at {transform.position}. Total bodies adrift: {allPersistentCorpses.Count}");
+            return corpse;
         }
     }
 }

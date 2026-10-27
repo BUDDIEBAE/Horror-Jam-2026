@@ -106,9 +106,18 @@ namespace SpaceHorror.Gameplay
 
             interactable.IsSingleUse = false;
 
+            bool isCorpseRecovery = DayCycleManager.Instance != null && DayCycleManager.Instance.HasCorpseToRecover;
             bool isContractActive = DayCycleManager.Instance != null && DayCycleManager.Instance.IsMissionActive;
 
-            if (isContractActive)
+            if (isCorpseRecovery)
+            {
+                interactable.ConfigureRuntimePrompts(
+                    terminalName,
+                    "REVIEW RECOVERY PROTOCOL",
+                    "CORPSE TELEMETRY BROADCASTING AT 128.0 MHz"
+                );
+            }
+            else if (isContractActive)
             {
                 interactable.ConfigureRuntimePrompts(
                     terminalName,
@@ -133,6 +142,20 @@ namespace SpaceHorror.Gameplay
 
             if (DayCycleManager.Instance != null)
             {
+                if (DayCycleManager.Instance.HasCorpseToRecover)
+                {
+                    var hud = FindFirstObjectByType<AstronautHelmetHUD>();
+                    if (hud != null)
+                    {
+                        hud.ShowMissionTransmission(
+                            "LOOP RECOVERY PROTOCOL",
+                            $"EMERGENCY TELEMETRY ARCHIVE // DAY {DayCycleManager.Instance.CurrentDay:D2}:\n'Fallen suit transponder detected adrift at 128.0 MHz. Locate fallen EVA suit, retrieve flight recorder telemetry, and continue pending expedition directive.'",
+                            5.5f
+                        );
+                    }
+                    return;
+                }
+
                 if (DayCycleManager.Instance.IsMissionActive)
                 {
                     // Already accepted today: replay telemetry transcript

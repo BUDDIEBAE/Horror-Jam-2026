@@ -78,6 +78,10 @@ namespace SpaceHorror.Gameplay
 
         private bool isTerminalContractAccepted = false;
         private bool isDayConcluding = false;
+        private bool hasCorpseToRecover = false;
+        private bool isCorpseDataRecoveredThisLoop = false;
+        public bool HasCorpseToRecover => hasCorpseToRecover;
+        public bool IsCorpseDataRecoveredThisLoop => isCorpseDataRecoveredThisLoop;
         private Coroutine dayTransitionCoroutine;
 
         private void Awake()
@@ -114,6 +118,13 @@ namespace SpaceHorror.Gameplay
 
         private void Start()
         {
+            ResolveReferences();
+            if (playerSurvival != null)
+            {
+                playerSurvival.OnPlayerAsphyxiated -= HandlePlayerAsphyxiated;
+                playerSurvival.OnPlayerAsphyxiated += HandlePlayerAsphyxiated;
+            }
+
             // Begin Day 1
             StartDay(currentDay, false);
         }
@@ -129,14 +140,22 @@ namespace SpaceHorror.Gameplay
 
             if (spawnPoint == null)
             {
-                GameObject sp = GameObject.Find("Spawnpoint");
+                GameObject sp = GameObject.Find("Spawn Point");
+                if (sp == null) sp = GameObject.Find("Spawnpoint");
                 if (sp == null) sp = GameObject.Find("SpawnPoint");
                 if (sp == null) sp = GameObject.Find("PlayerSpawnPoint");
+                if (sp == null) sp = GameObject.Find("Player Spawn Point");
                 if (sp == null) sp = GameObject.Find("ShipSpawnPoint");
+                if (sp == null) sp = GameObject.Find("Ship Spawn Point");
+                if (sp == null) sp = GameObject.Find("Player Spawn");
                 if (sp != null)
                 {
                     spawnPoint = sp.transform;
                     Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Auto-detected Spawnpoint: '{sp.name}' at {spawnPoint.position}");
+                }
+                else if (returnAirlock != null)
+                {
+                    spawnPoint = returnAirlock.transform;
                 }
             }
         }
@@ -207,11 +226,27 @@ namespace SpaceHorror.Gameplay
         /// </summary>
         public void StartDay(int dayNumber, bool triggerWakeUp = true)
         {
+            if (dayNumber != currentDay)
+            {
+                hasCorpseToRecover = false;
+                isCorpseDataRecoveredThisLoop = false;
+            }
+
             currentDay = dayNumber;
-            currentState = ExpeditionState.InShip_AwaitingContract;
-            isTerminalContractAccepted = false;
             isDayConcluding = false;
             activeDay = GetDayData(currentDay);
+
+            if (hasCorpseToRecover)
+            {
+                // In loop recovery: player is immediately authorized for EVA to recover the corpse
+                currentState = ExpeditionState.EVA_InProgress;
+                isTerminalContractAccepted = true;
+            }
+            else
+            {
+                currentState = ExpeditionState.InShip_AwaitingContract;
+                isTerminalContractAccepted = false;
+            }
 
             // 1. Refill player life support for the new expedition
             if (playerSurvival != null)
@@ -223,22 +258,40 @@ namespace SpaceHorror.Gameplay
             // 2. Position player at spawn point
             TeleportPlayerToSpawn();
 
-            // 3. Deactivate all mission target beacons until contract is accepted at terminal
+            // 3. Setup mission target beacons and listeners (preserving completed missions if recovering corpse)
             if (activeDay != null && activeDay.missions != null)
             {
                 for (int i = 0; i < activeDay.missions.Count; i++)
                 {
                     MissionObjectiveData m = activeDay.missions[i];
-                    m.ResetRuntimeState();
+                    if (!hasCorpseToRecover)
+                    {
+                        m.ResetRuntimeState();
+                    }
                     AutoBindMissionTargets(m);
                     if (m.targetBeacon != null)
                     {
-                        m.targetBeacon.gameObject.SetActive(false);
+                        bool shouldTransmit = hasCorpseToRecover && !m.isCompleted;
+                        m.targetBeacon.SetTransmitting(shouldTransmit);
+                        m.targetBeacon.enabled = shouldTransmit;
+                    }
+
+                    if (m.targetInteractable != null)
+                    {
+                        m.targetInteractable.onInteracted.RemoveAllListeners();
+                        m.targetInteractable.onInteracted.AddListener((player) => HandleObjectiveInteracted(m, player));
+                        if (!hasCorpseToRecover)
+                        {
+                            m.targetInteractable.ResetObjective();
+                        }
                     }
                 }
             }
 
-            // 4. Update Helmet Visor HUD
+            // 4. Regenerate world-space survival pickups (O2 canisters, suit repair stations)
+            ResetSurvivalInteractables(hasCorpseToRecover);
+
+            // 5. Update Helmet Visor HUD
             if (helmetHUD != null)
             {
                 helmetHUD.SetHUDAlpha(1f);
@@ -246,7 +299,14 @@ namespace SpaceHorror.Gameplay
             UpdateHUDObjectiveCard();
             if (helmetHUD != null && activeDay != null)
             {
-                helmetHUD.ShowDayBanner(currentDay, activeDay.dayTitle);
+                if (hasCorpseToRecover)
+                {
+                    helmetHUD.ShowDayBanner(currentDay, "RECOVER FALLEN TELEMETRY");
+                }
+                else
+                {
+                    helmetHUD.ShowDayBanner(currentDay, activeDay.dayTitle);
+                }
             }
 
             // 5. Trigger Waking Transition or ensure input enabled
@@ -287,72 +347,83 @@ namespace SpaceHorror.Gameplay
         }
 
         /// <summary>
-        /// Generates the structured daily checklist items matching the Paint HUD wireframe.
-        /// If 1 mission is configured in the day, produces 1 objective. If multiple, produces all objectives.
+        /// Updates the Paint-style HUD Objective Card dynamically according to the active expedition Phase:
+        /// - Phase 1 (Pre-Acceptance): "Access Ship Mission Terminal" OR "Recover Mission Data from Fallen Corpse (128.0 MHz)"
+        /// - Phase 2 (Active Execution): Day's space mission objectives configured in Inspector (preserves completed [DONE] status)
+        /// - Phase 3 (Extraction/Turn-in): "Return to Ship Airlock (121.5 MHz)"
         /// </summary>
-        private string[] GetDailyTaskList()
-        {
-            List<string> tasks = new List<string>();
-            tasks.Add("Access Ship Mission Terminal");
-
-            if (activeDay != null && activeDay.missions != null)
-            {
-                for (int i = 0; i < activeDay.missions.Count; i++)
-                {
-                    var m = activeDay.missions[i];
-                    string freqInfo = (m != null && m.frequencyMHz > 0) ? $" ({m.frequencyMHz:F1} MHz)" : "";
-                    string directive = m != null ? m.directiveText : "Complete Space Mission";
-                    tasks.Add($"{directive}{freqInfo}");
-                }
-            }
-
-            tasks.Add("Return to Ship Airlock (121.5 MHz)");
-            return tasks.ToArray();
-        }
-
         private void UpdateHUDObjectiveCard()
         {
             if (helmetHUD == null || activeDay == null) return;
 
-            string[] tasks = GetDailyTaskList();
-            int totalTasks = tasks.Length;
-            bool[] completedStates = new bool[totalTasks];
-
-            // 1. Terminal task (index 0)
-            completedStates[0] = isTerminalContractAccepted;
-
-            // 2. Mission objectives (indices 1 to activeDay.missions.Count)
-            int firstIncompleteMissionIdx = -1;
             int missionCount = activeDay.missions != null ? activeDay.missions.Count : 0;
+            int incompleteCount = 0;
+            int firstIncompleteMissionIdx = -1;
             for (int i = 0; i < missionCount; i++)
             {
-                bool done = activeDay.missions[i].isCompleted;
-                completedStates[i + 1] = done;
-                if (!done && firstIncompleteMissionIdx == -1)
+                if (!activeDay.missions[i].isCompleted)
                 {
-                    firstIncompleteMissionIdx = i;
+                    incompleteCount++;
+                    if (firstIncompleteMissionIdx == -1) firstIncompleteMissionIdx = i;
                 }
             }
 
-            // 3. Airlock extraction task (last index)
-            completedStates[totalTasks - 1] = isDayConcluding;
+            // =========================================================================
+            // PHASE 1: PRE-ACCEPTANCE / CORPSE RECOVERY (ก่อนรับภารกิจ / กู้ข้อมูลจากศพ)
+            // =========================================================================
+            if (hasCorpseToRecover && !isCorpseDataRecoveredThisLoop)
+            {
+                // Fallen astronaut loop recovery: Must first collect flight telemetry from corpse
+                string[] tasks = new string[] { "Recover Mission Data from Fallen Corpse (128.0 MHz)" };
+                bool[] completed = new bool[] { false };
+                string header = $"DAY {currentDay} // CORPSE RECOVERY";
+                helmetHUD.SetObjectiveChecklist(currentDay, tasks, completed, 0, header);
+                return;
+            }
 
-            // Determine which task is currently active (highlighted bright white)
-            int activeIndex = -1;
             if (!isTerminalContractAccepted)
             {
-                activeIndex = 0; // Access terminal
-            }
-            else if (firstIncompleteMissionIdx != -1)
-            {
-                activeIndex = firstIncompleteMissionIdx + 1; // Current pending space mission
-            }
-            else if (!isDayConcluding)
-            {
-                activeIndex = totalTasks - 1; // All missions done -> Return to airlock
+                // Normal fresh day start: Must first access ship terminal to accept contract
+                string[] tasks = new string[] { "Access Ship Mission Terminal" };
+                bool[] completed = new bool[] { false };
+                string header = $"DAY {currentDay} // PREPARATION";
+                helmetHUD.SetObjectiveChecklist(currentDay, tasks, completed, 0, header);
+                return;
             }
 
-            helmetHUD.SetObjectiveChecklist(currentDay, tasks, completedStates, activeIndex);
+            // =========================================================================
+            // PHASE 2: ACTIVE EXECUTION (รับภารกิจแล้ว / กำลังทำภารกิจในอวกาศตามที่ตั้งค่าไว้)
+            // =========================================================================
+            if (incompleteCount > 0)
+            {
+                string[] tasks = new string[missionCount];
+                bool[] completed = new bool[missionCount];
+
+                for (int i = 0; i < missionCount; i++)
+                {
+                    var m = activeDay.missions[i];
+                    string freqInfo = (m != null && m.frequencyMHz > 0) ? $" ({m.frequencyMHz:F1} MHz)" : "";
+                    string directive = m != null ? m.directiveText : "Complete Space Mission";
+                    tasks[i] = $"{directive}{freqInfo}";
+                    completed[i] = (m != null && m.isCompleted);
+                }
+
+                int activeIndex = firstIncompleteMissionIdx;
+                string header = $"DAY {currentDay} // EXPEDITION";
+                helmetHUD.SetObjectiveChecklist(currentDay, tasks, completed, activeIndex, header);
+                return;
+            }
+
+            // =========================================================================
+            // PHASE 3: EXTRACTION / TURN-IN (ภารกิจครบแล้ว / กลับมาส่งภารกิจที่ยาน)
+            // =========================================================================
+            {
+                string[] tasks = new string[] { "Return to Ship Airlock (121.5 MHz)" };
+                bool[] completed = new bool[] { isDayConcluding };
+                int activeIndex = isDayConcluding ? -1 : 0;
+                string header = $"DAY {currentDay} // EXTRACTION";
+                helmetHUD.SetObjectiveChecklist(currentDay, tasks, completed, activeIndex, header);
+            }
         }
 
         /// <summary>
@@ -374,7 +445,8 @@ namespace SpaceHorror.Gameplay
                     MissionObjectiveData m = activeDay.missions[i];
                     if (m.targetBeacon != null)
                     {
-                        m.targetBeacon.gameObject.SetActive(true);
+                        m.targetBeacon.SetTransmitting(true);
+                        m.targetBeacon.enabled = true;
                     }
 
                     if (m.targetInteractable != null)
@@ -407,7 +479,8 @@ namespace SpaceHorror.Gameplay
 
             if (mission.targetBeacon != null)
             {
-                mission.targetBeacon.gameObject.SetActive(false);
+                mission.targetBeacon.SetTransmitting(false);
+                mission.targetBeacon.enabled = false;
             }
 
             // Count completed objectives
@@ -418,23 +491,27 @@ namespace SpaceHorror.Gameplay
                 if (activeDay.missions[i].isCompleted) completedCount++;
             }
 
-            if (completedCount < totalCount)
+            bool allMissionsDone = completedCount >= totalCount;
+            bool corpseDone = !hasCorpseToRecover || isCorpseDataRecoveredThisLoop;
+
+            // Notify HorrorEventManager of objective completion for scripted horror events (e.g. Rupture on final station)
+            bool isHorrorEventTriggered = false;
+            if (HorrorEventManager.Instance != null)
             {
-                // Still more objectives remaining in outer space
-                UpdateHUDObjectiveCard();
-                if (helmetHUD != null)
+                HorrorEventManager.Instance.HandleObjectiveCompleted(currentDay, mission, player, allMissionsDone);
+                if (currentDay == 2 && HorrorEventManager.Instance.HasTriggeredO2Explosion)
                 {
-                    helmetHUD.ShowInteractionStatusMessage($"OBJECTIVE SECURED ({completedCount}/{totalCount}) // PROCEED TO NEXT TARGET", 4.0f);
+                    isHorrorEventTriggered = true;
                 }
-                Debug.Log($"<color=#FFFFFF><b>[DayCycleManager]</b></color> Objective secured ({completedCount}/{totalCount}) for DAY {currentDay}");
             }
-            else
+
+            if (allMissionsDone && corpseDone)
             {
-                // All objectives for the day completed!
+                // All objectives for the day (missions + corpse data) completed!
                 currentState = ExpeditionState.EVA_ObjectiveCompleted;
                 UpdateHUDObjectiveCard();
 
-                if (helmetHUD != null)
+                if (helmetHUD != null && !isHorrorEventTriggered)
                 {
                     helmetHUD.ShowInteractionStatusMessage("ALL OBJECTIVES SECURED // RETURN TO AIRLOCK [121.5 MHz]", 4.5f);
                 }
@@ -447,6 +524,83 @@ namespace SpaceHorror.Gameplay
                 OnMissionCompleted?.Invoke(activeDay);
                 Debug.Log($"<color=#FFFFFF><b>[DayCycleManager]</b></color> All {totalCount} objectives completed for DAY {currentDay}! Return to Ship.");
             }
+            else
+            {
+                // Still more objectives remaining in outer space
+                UpdateHUDObjectiveCard();
+                if (helmetHUD != null)
+                {
+                    if (!corpseDone)
+                    {
+                        helmetHUD.ShowInteractionStatusMessage($"OBJECTIVE SECURED ({completedCount}/{totalCount}) // RECOVER FALLEN TELEMETRY [128.0 MHz]", 4.0f);
+                    }
+                    else
+                    {
+                        helmetHUD.ShowInteractionStatusMessage($"OBJECTIVE SECURED ({completedCount}/{totalCount}) // PROCEED TO NEXT TARGET", 4.0f);
+                    }
+                }
+                Debug.Log($"<color=#FFFFFF><b>[DayCycleManager]</b></color> Objective secured ({completedCount}/{totalCount}) for DAY {currentDay}");
+            }
+        }
+
+        /// <summary>
+        /// Recovers mission telemetry from an external source (such as the player's fallen corpse from a previous loop).
+        /// Secures the flight recorder telemetry so the astronaut can continue with the remaining day's mission objectives.
+        /// </summary>
+        public bool TryRecoverMissionData(string sourceName = "Fallen Astronaut")
+        {
+            if (activeDay == null) return false;
+
+            hasCorpseToRecover = false;
+            isCorpseDataRecoveredThisLoop = true;
+
+            int incompleteCount = 0;
+            int totalCount = activeDay.missions != null ? activeDay.missions.Count : 0;
+            if (activeDay.missions != null)
+            {
+                for (int i = 0; i < totalCount; i++)
+                {
+                    if (!activeDay.missions[i].isCompleted)
+                    {
+                        incompleteCount++;
+                        if (activeDay.missions[i].targetBeacon != null)
+                        {
+                            activeDay.missions[i].targetBeacon.SetTransmitting(true);
+                            activeDay.missions[i].targetBeacon.enabled = true;
+                        }
+                    }
+                }
+            }
+
+            if (incompleteCount > 0)
+            {
+                // Telemetry secured: astronaut continues pending space missions
+                currentState = ExpeditionState.EVA_InProgress;
+                UpdateHUDObjectiveCard();
+                if (helmetHUD != null)
+                {
+                    helmetHUD.ShowInteractionStatusMessage("CORPSE DATA SECURED // PROCEED WITH MISSION DIRECTIVE", 4.5f);
+                }
+                Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Corpse telemetry recovered from {sourceName}. {incompleteCount} mission(s) pending.");
+            }
+            else
+            {
+                // All missions were already completed prior to death: astronaut can now return to airlock
+                currentState = ExpeditionState.EVA_ObjectiveCompleted;
+                UpdateHUDObjectiveCard();
+                if (helmetHUD != null)
+                {
+                    helmetHUD.ShowInteractionStatusMessage("ALL OBJECTIVES SECURED // RETURN TO AIRLOCK [121.5 MHz]", 4.5f);
+                }
+                if (returnAirlock != null)
+                {
+                    returnAirlock.RefreshAirlockPrompts();
+                }
+                OnMissionCompleted?.Invoke(activeDay);
+                Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Corpse telemetry recovered from {sourceName}. All missions completed! Return to Ship.");
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -507,12 +661,22 @@ namespace SpaceHorror.Gameplay
         }
 
         /// <summary>
+        /// Public entry point called by AstronautSurvival upon death to trigger loop respawn.
+        /// </summary>
+        public void NotifyPlayerAsphyxiated()
+        {
+            HandlePlayerAsphyxiated();
+        }
+
+        /// <summary>
         /// Handles player asphyxiation death in outer space:
-        /// Rescues player back to ship cryo bay and retries the day.
+        /// Rescues player back to ship cryo bay and retries the day with corpse recovery objective.
         /// </summary>
         private void HandlePlayerAsphyxiated()
         {
             if (dayTransitionCoroutine != null) return;
+            hasCorpseToRecover = true;
+            isCorpseDataRecoveredThisLoop = false;
             dayTransitionCoroutine = StartCoroutine(EmergencyRescueRoutine());
         }
 
@@ -535,7 +699,7 @@ namespace SpaceHorror.Gameplay
             // 2. Visor emergency notification
             if (helmetHUD != null)
             {
-                helmetHUD.ShowMissionTransmission("OXYGEN DEPLETED", "LIFE SUPPORT OFFLINE // EMERGENCY RECOVERY TO SHIP CRYOPOD...", 3.5f);
+                helmetHUD.ShowMissionTransmission("OXYGEN DEPLETED", "LIFE SUPPORT OFFLINE // EMERGENCY RECOVERY TO SHIP CRYOPOD...", 3.0f);
             }
 
             yield return new WaitForSeconds(1.2f);
@@ -543,9 +707,13 @@ namespace SpaceHorror.Gameplay
             // 3. Teleport immediately to spawn point
             TeleportPlayerToSpawn();
 
-            yield return new WaitForSeconds(1.5f);
+            yield return new WaitForSeconds(0.6f);
 
-            // 4. Restart current day inside ship (refills O2 & suit, resets terminal, triggers wake-up)
+            // 4. Mark loop recovery: Player died and must recover mission data from corpse
+            hasCorpseToRecover = true;
+            isCorpseDataRecoveredThisLoop = false;
+
+            // Restart current day inside ship (refills O2 & suit, sets top-left corpse recovery mission, triggers wake-up)
             StartDay(currentDay, true);
             dayTransitionCoroutine = null;
         }
@@ -624,6 +792,47 @@ namespace SpaceHorror.Gameplay
         }
 
         /// <summary>
+        /// Resets all world-space survival pickups (O2 canisters, suit repair stations, etc.)
+        /// based on their resetOnNewDay / resetOnLoop configurations.
+        /// </summary>
+        private void ResetSurvivalInteractables(bool isLoopRevival)
+        {
+            MissionInteractable[] allInteractables = FindObjectsByType<MissionInteractable>(FindObjectsSortMode.None);
+            for (int i = 0; i < allInteractables.Length; i++)
+            {
+                MissionInteractable item = allInteractables[i];
+                if (item == null) continue;
+
+                // Check if this interactable is an active objective of the day
+                bool isMissionTarget = false;
+                if (activeDay != null && activeDay.missions != null)
+                {
+                    for (int m = 0; m < activeDay.missions.Count; m++)
+                    {
+                        if (activeDay.missions[m].targetInteractable == item)
+                        {
+                            isMissionTarget = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Mission targets during loop recovery are handled separately to preserve completed objectives
+                if (isMissionTarget && isLoopRevival)
+                {
+                    continue;
+                }
+
+                // Check regeneration flags on the interactable
+                bool shouldRegen = isLoopRevival ? item.ResetOnLoop : item.ResetOnNewDay;
+                if (shouldRegen)
+                {
+                    item.ResetObjective();
+                }
+            }
+        }
+
+        /// <summary>
         /// Instantly teleports the player to the configured SpawnPoint, cancelling all inertia and angular drift.
         /// </summary>
         [ContextMenu("Teleport Player To Spawn")]
@@ -657,7 +866,10 @@ namespace SpaceHorror.Gameplay
 
             if (targetTransform != null)
             {
-                Rigidbody rb = targetTransform.GetComponent<Rigidbody>();
+                Transform rootTransform = targetTransform.root;
+                Rigidbody rb = rootTransform.GetComponent<Rigidbody>();
+                if (rb == null) rb = targetTransform.GetComponent<Rigidbody>();
+
                 if (rb != null)
                 {
                     rb.linearVelocity = Vector3.zero;
@@ -666,8 +878,13 @@ namespace SpaceHorror.Gameplay
                     rb.rotation = spawnPoint.rotation;
                 }
 
-                targetTransform.position = spawnPoint.position;
-                targetTransform.rotation = spawnPoint.rotation;
+                rootTransform.position = spawnPoint.position;
+                rootTransform.rotation = spawnPoint.rotation;
+                if (targetTransform != rootTransform)
+                {
+                    targetTransform.position = spawnPoint.position;
+                    targetTransform.rotation = spawnPoint.rotation;
+                }
                 Physics.SyncTransforms();
 
                 Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Astronaut teleported to Spawnpoint '{spawnPoint.name}' at {spawnPoint.position}");

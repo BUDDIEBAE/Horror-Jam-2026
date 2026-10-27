@@ -32,10 +32,10 @@ namespace SpaceHorror.UI
         [SerializeField] private TMP_Text lockOnStatusText;
 
         [Header("Monochrome Noir Color Tokens")]
-        private readonly Color colWhite = new Color(0.96f, 0.98f, 1.0f, 0.98f);
-        private readonly Color colAshSilver = new Color(0.72f, 0.75f, 0.80f, 0.85f);
-        private readonly Color colCharcoal = new Color(0.14f, 0.16f, 0.18f, 0.75f);
-        private readonly Color colDeepBlack = new Color(0.015f, 0.02f, 0.025f, 0.92f);
+        private readonly Color colWhite = new Color(1.0f, 1.0f, 1.0f, 0.98f);
+        private readonly Color colAshSilver = new Color(0.75f, 0.75f, 0.75f, 0.85f);
+        private readonly Color colCharcoal = new Color(0.16f, 0.16f, 0.16f, 0.75f);
+        private readonly Color colDeepBlack = new Color(0.02f, 0.02f, 0.02f, 0.92f);
 
         // Oscilloscope procedural texture
         private Texture2D oscTexture;
@@ -250,7 +250,7 @@ namespace SpaceHorror.UI
 
         private void ClearOscilloscope()
         {
-            Color32 bg = new Color32(4, 5, 6, 230); // Deep CRT phosphor dark
+            Color32 bg = new Color32(5, 5, 5, 230); // Deep CRT phosphor dark (Pure monochrome)
             for (int i = 0; i < oscPixels.Length; i++)
             {
                 oscPixels[i] = bg;
@@ -273,8 +273,8 @@ namespace SpaceHorror.UI
             float amplitude = hasSignal ? Mathf.Lerp(1.5f, 10.5f, strength) : 0.8f;
             float frequency = hasSignal ? Mathf.Lerp(0.08f, 0.28f, strength) : 0.05f;
 
-            Color32 waveColor = isLockOnInverted ? new Color32(10, 10, 10, 255) : new Color32(245, 250, 255, 255);
-            Color32 dimGlow = isLockOnInverted ? new Color32(80, 80, 80, 180) : new Color32(160, 175, 190, 150);
+            Color32 waveColor = isLockOnInverted ? new Color32(10, 10, 10, 255) : new Color32(250, 250, 250, 255);
+            Color32 dimGlow = isLockOnInverted ? new Color32(80, 80, 80, 180) : new Color32(175, 175, 175, 150);
 
             for (int x = 0; x < OSC_WIDTH; x++)
             {
