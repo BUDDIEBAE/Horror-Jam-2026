@@ -5,9 +5,9 @@
 - **Visual Style**: Strictly **Film Noir (Pure Monochrome B&W)** adhering to `.agents/rules/film_noir_style.md`.
 - **Day Progression & Horror Pacing**:
   - **Day 1: Tutorial & Foundation (สร้างความคุ้นเคย & False Sense of Security)**: สอนระบบพื้นฐาน 6DoF, การจูนคลื่น Signal Tracker, การรับภารกิจที่ Terminal และการบินกลับเข้า Airlock ปิดวันอย่างปลอดภัย
-  - **Day 2: Event 0 - "The Catastrophic Rupture" (ซ่อม O2 Station แล้วระเบิด - บังคับตายเปิดลูป)**: ทำลายความมั่นใจของผู้เล่นด้วยการระเบิดของสถานี O2 บังคับชุดรั่วเหลือ 30% และตายในอวกาศเป็นศพแรก
-  - **Day 3 (Loop Reset): Event 1 - "The Unsettled Corpse" (ศพตัวเองในลูปก่อนหน้าที่ไม่อยู่นิ่ง)**: ตื่นมาในยานหลังความตายแรก มีคำสั่งให้บินไปกู้ข้อมูลจากศพตนเองที่ตายใน Day 2 แล้วพบกับความสยอง
-  - **Day 3+ / Deep Space: Event 2 - "Phantom Frequency 00.0 MHz" (สัญญาณวิทยุจากคลื่นที่ไม่มีในสารบบ)**: คลื่นปริศนาแทรกแซงและเสียงเคาะกระจกหมวก
+  - **Day 2: Event 0 - "The Catastrophic Rupture" (ซ่อม O2 Station แล้วระเบิด - บังคับตายเปิดลูป)**: ทำลายความมั่นใจของผู้เล่นด้วยการระเบิดของสถานี O2 บังคับชุดรั่วเหลือ 15% และตายในอวกาศเป็นศพแรก
+  - **Day 2 (Loop Reset): Event 1 - "The Unsettled Corpse" (ศพตัวเองในลูปก่อนหน้าที่ไม่อยู่นิ่ง)**: ตื่นมาในยานหลังความตายแรก (ยังคงเป็น Day 2 ลูปเดิม) มีคำสั่งให้บินไปกู้ข้อมูลจากศพตนเองที่ตายจาก Event 0 แล้วพบกับความสยอง เมื่อกู้ข้อมูลเสร็จและกลับมานอนที่ยาน ถึงจะผ่านเข้าสู่ Day 3
+  - **Day 3: Event 2 - "Luminous Anomalies & Sanity Corruption" (ลูกบอลแสงลอยคว้าง & ระบบ Sanity)**: ปรากฏลูกบอลแสงกระจัดกระจายในอวกาศ ผู้เล่นมีหน้าที่บินไป Scan ดวงไฟเหล่านั้น ซึ่งจะเพิ่มค่า Sanity ที่นำไปใช้ปลดล็อกความหลอนขั้นต่อไป
 
 ---
 
@@ -33,7 +33,7 @@
 - เมื่อซ่อมบำรุงเสร็จสิ้น (Progress 100%) วาล์วแรงดันของสถานีย่อยเกิด Overload ส่งเสียงโลหะลั่น และ **ระเบิดฉีกขาดอย่างรุนแรง (Explosive Decompression)**
 - แรงระเบิดและสะเก็ดโลหะฉีกกระชากชุดอวกาศของผู้เล่น **บังคับลดค่าความคงทนของชุด (Suit Integrity) เหลือ 15% ทันที**
 - ทำให้เกิดรอยรั่วขั้นวิกฤต (`[!] SUIT LEAK: 15%`) ออกซิเจนพุ่งรั่วไหลอย่างรวดเร็วเกินกว่าจะกลับยานได้ทัน บังคับให้ผู้เล่นค่อยๆ ขาดอากาศหายใจตายในความมืด
-- ศพจะลอยคว้างอยู่ข้างซากสถานี เพื่อเป็นตัวจุดชนวนให้เกิด **Event 1** ใน Day 3
+- ศพจะลอยคว้างอยู่ข้างซากสถานี เพื่อเป็นตัวจุดชนวนให้เกิด **Event 1** ใน Day 2 (Loop Reset)
 
 ### 2. Trigger Conditions
 - **Day / Loop**: **Day 2** (กำหนดข้อมูลภารกิจใน Inspector ของ `DayCycleManager` ใน Scene โดยตรง ไม่ Hard-code)
@@ -47,7 +47,7 @@
 | **2. จังหวะระเบิด (The Rupture)** | พอเต็ม 100% ถัง O2 ระเบิดฉีกขาด กระแทกร่างผู้เล่นลอยหมุนเคว้ง 6DoF ไปในความมืด | หน้าจอสว่างวาบขาวสนิท (Stark White Flash 0.2s) ก่อนตัดเป็น Noise Static |
 | **3. ชุดฉีกขาด (Catastrophic Breach)** | ค่า Suit Integrity บน HUD **ถูกบังคับลดฮวบเหลือ 15% ทันที** ข้อความเตือนกระพริบ: `[!] SUIT LEAK: 15%` | เสียงก๊าซออกซิเจนพุ่งรั่วฟู่อย่างรุนแรงออกจากชุด (Continuous High-Pressure Hiss) |
 | **4. ความตายที่หลีกเลี่ยงไม่ได้** | ออกซิเจนรั่วไหลด้วยความเร็วสูงมาก (Massive Leak Rate) แถบ O2 ไหลลงอย่างรวดเร็ว ขอบจอเริ่มเกิด Suffocation Vignette มืดลงทีละนิด | เสียงหัวใจเต้นถี่รัว 150+ BPM สลับกับเสียงหายใจหอบเฮือกสุดท้าย |
-| **5. การสิ้นชีพ & กำเนิดลูป** | ผู้เล่นหมดสติและขาดอากาศหายใจ (Asphyxiation) จอมืดดับสนิท ร่างกายกลายเป็น **Persistent Corpse** ลอยอยู่ข้างสถานี | ตัดฉากกลับมาลืมตาตื่นขึ้นมาใหม่ในยานอวกาศ (Day 3 Begins) พร้อมคำสั่งให้ไปเก็บกู้ข้อมูลจากศพตัวเอง |
+| **5. การสิ้นชีพ & กำเนิดลูป** | ผู้เล่นหมดสติและขาดอากาศหายใจ (Asphyxiation) จอมืดดับสนิท ร่างกายกลายเป็น **Persistent Corpse** ลอยอยู่ข้างสถานี | ตัดฉากกลับมาลืมตาตื่นขึ้นมาใหม่ในยานอวกาศ (Day 2 Loop Retry) พร้อมคำสั่งให้ไปเก็บกู้ข้อมูลจากศพตัวเอง |
 
 ### 4. Technical Integration Hooks & Multi-Station Support
 - **Multi-Station Support (รองรับหลาย Station ใน Day 2)**:
@@ -64,13 +64,14 @@
 
 ---
 
-## Day 3: Event 1 - The Unsettled Corpse (ความสยองจากศพตัวเอง)
+## Day 2 (Loop Reset): Event 1 - The Unsettled Corpse (ความสยองจากศพตัวเอง)
 
 ### 1. Concept & Narrative
-**ต่อเนื่องจากความตายใน Day 2**: ผู้เล่นฟื้นขึ้นมาในยานใน Day 3 (ลูปใหม่) ได้รับ Directive ว่าภารกิจ Day 2 ล้มเหลวเนื่องจากนักบินคนก่อนเสียชีวิต ให้บินกลับไปเก็บกู้ข้อมูลภารกิจ (Collect Mission Data) จากศพของตนเองที่ลอยอยู่ข้างสถานี O2 ทว่าศพนั้นกลับมีปฏิกิริยาตอบสนองอย่างน่าขนลุก
+**ต่อเนื่องจากความตายใน Day 2 (First Attempt)**: เมื่อผู้เล่นขาดอากาศหายใจ ระบบ Time Loop จะดึงผู้เล่นฟื้นขึ้นมาในยานใน **Day 2 เดิม (Loop Retry)** มี Directive ให้บินกลับไปเก็บกู้ข้อมูลภารกิจ (Collect Mission Data) จากศพของตนเองที่ลอยอยู่ข้างซากสถานี O2 เพื่อให้สามารถเคลียร์ภารกิจ Day 2 และปลดล็อคการกลับยานได้ ทว่าศพนั้นกลับมีปฏิกิริยาตอบสนองอย่างน่าขนลุก
 
 ### 2. Trigger Conditions
-- **Day / Loop**: **Day 3** (หรือเมื่อบินเข้าไปกู้ข้อมูลจากศพ Day 2)
+- **Day / Loop**: **Day 2 (Loop Reset)**
+- **Target Corpse**: **ศพของผู้เล่นที่เกิดจากการระเบิดของ O2 Station ใน Day 2 (Event 0) เท่านั้น (Fixed Event ไม่ใช่ทุกศพ)**
 - **Phase**: Mission Exploration Phase
 - **Proximity**: เมื่อผู้เล่นบินเข้าใกล้ศพในระยะ < 6 เมตร หรือขณะทำการกดค้าง `[LMB]` เพื่อกู้ข้อมูล
 
@@ -78,43 +79,51 @@
 | ลำดับ | เหตุการณ์ | เสียง & วิชวล (Film Noir) |
 |---|---|---|
 | **1. การตรวจจับคลื่น** | คลื่นวิทยุจับสัญญาณชีพจรเต้นช้าๆ (40 BPM) ออกมาจากหมวกศพ ทั้งที่ตายไปแล้ว | เสียง Static เบาๆ สลับเสียงคลื่นหัวใจต่ำกังวาน |
-| **2. ระหว่างเก็บกู้ข้อมูล** | ขณะผู้เล่นกดค้าง `[LMB]` เพื่อ Recover Data (ความคืบหน้า 60%) หมวกของศพจะค่อยๆ **หมุนคอเอียงหันกลับมาสบตากับผู้เล่นโดยตรง** ช้าๆ แบบผิดธรรมชาติ | มีเสียงข้อต่อชุดอวกาศบิดตัวในสุญญากาศ "เอี๊ยด... แกร๊ก..." ผ่านการสั่นสะเทือน |
-| **3. สัญญาณเตือน** | ค่า Heart Rate บน HUD ของผู้เล่นพุ่งสูงทะลุ 130+ BPM ทันที | ไอคอนรูปหัวใจกระพริบถี่เป็นสีขาวสลับดำ |
-| **4. จุดกระตุกขวัญ** | เมื่อเก็บกู้ครบ 100% ไฟฉายบนหมวกของศพที่เคยดับอยู่ จะ **กระพริบติดสว่างวาบขึ้นมาอัดเข้าหน้ากากผู้เล่น 1 ครั้ง** พร้อมเสียงไฟช็อตสั้นๆ | ลำแสงขาวจัดตัดความมืดสนิท (Chiaroscuro Jolt) จากนั้นไฟศพจะดับลง และศพจะกลับมาแน่นิ่งลอยตามแรงเฉื่อยตามเดิม |
+| **2. ระหว่างเก็บกู้ข้อมูล** | ขณะผู้เล่นกดค้าง `[LMB]` เพื่อ Recover Data (ความคืบหน้า 50%+) หมวกของศพจะค่อยๆ **หมุนคอเอียงหันกลับมาสบตากับผู้เล่นโดยตรง** ช้าๆ แบบผิดธรรมชาติ | มีเสียงข้อต่อชุดอวกาศบิดตัวในสุญญากาศ "เอี๊ยด... แกร๊ก..." ผ่านการสั่นสะเทือน |
+| **3. สัญญาณเตือน** | ค่า Heart Rate บน HUD ของผู้เล่นพุ่งสูงทะลุ 135+ BPM ทันที พร้อมเสียงสูดหายใจหอบตกใจในหมวก | ไอคอนรูปหัวใจกระพริบถี่เป็นสีขาวสลับดำ |
+| **4. จุดกระตุกขวัญ (The Jolt)** | เมื่อเก็บกู้ครบ 100% เกิด Noir Visor Flash + Glitch + แรงกระตุก Trauma ที่กล้อง และไฟฉายบนหมวกของศพจะกะพริบจ้าสะท้อนเงามืดตัดดำขาว (Chiaroscuro) | เสียงไฟฟ้าลั่นเปรี๊ยะ (Electrical Snap) |
+| **5. การตัดสัญญาณวิทยุ** | สัญญาณ Beacon `128.0 MHz` ของศพถูกตัดและทำลายทิ้งทันที หายไปจากเครื่องรับวิทยุอย่างถาวร วิทยุจูนกลับ Airlock `121.5 MHz` | ข้อความแจ้งเตือน `TELEMETRY RECOVERED // RETURN TO AIRLOCK` |
 
 ### 4. Technical Integration Hooks
 - **Target Component**: `FallenAstronautRecovery.cs`
 - **Hooks**:
-  - `onHoldProgress`: ตรวจสอบเมื่อ progress เกิน 0.5f -> สั่ง Lerp หมุนกระดูกส่วนคอ (`headBone` หรือ transform ของหมวกศพ) ให้หันมายังผู้เล่น
-  - `onInteracted`: สั่งให้ Flashlight ของศพกะพริบติด (`corpseFlashlight.enabled = true` เป็นเวลา 0.6 วินาที)
-  - `AstronautSurvival`: สั่ง `SimulateStressHeartRate(140f)` ชั่วคราว
+  - `onHoldProgress`: ตรวจสอบเมื่อ progress เกิน 0.5f -> สั่ง Slerp หมุนกระดูกส่วนคอและศีรษะ (`spine.005` / `spine.004`) พร้อม Micro-jitter ให้หันมายังผู้เล่น
+  - `TriggerShockSpike`: สั่ง `AstronautSurvival.TriggerHeartSpike(55f)` และ `AstronautAudioSystem.TriggerWakeUpGasp()`
+  - `HandleDataCollected`: สั่งกล้องสั่น `AstronautCameraRig.AddTrauma(0.55f)`, หน้ากากกะพริบ `hud.TriggerNoirFlash(0.65f)`, Visor CRT Glitch `hud.TriggerVisorGlitch(0.40f)`, ไฟฉายศพกะพริบเงาชัด และเรียก `SilenceAndDestroyBeacon()` ตัดสัญญาณวิทยุออกจากระบบ
 
 ---
 
-## Event 2: Phantom Frequency 00.0 MHz (สัญญาณที่ไม่มีอยู่ในบันทึก)
+## Event 2: Luminous Anomalies & Sanity Corruption (ดวงไฟปริศนา & ระบบ Sanity)
 
 ### 1. Concept & Narrative
-ในความเวิ้งว้างของอวกาศลึกที่ไร้เสียง วิทยุสื่อสารคือสิ่งเดียวที่เชื่อมต่อผู้เล่นกับโลกภายนอก แต่จู่ๆ อุปกรณ์รับสัญญาณกลับถูกแทรกแซงด้วยคลื่นความถี่ลึกลับที่ไม่มีอยู่ในตารางภารกิจ พร้อมเสียงเคาะที่กระจกหมวกจากภายนอก
+ใน **Day 3** ท่ามกลางความมืดมิดของอวกาศลึก จู่ๆ ก็มี **"ลูกบอลแสงปริศนา" (Luminous Anomaly Orbs)** ปรากฏขึ้นกระจัดกระจายลอยเคว้งอยู่ในเซกเตอร์อย่างไร้ที่มา แสงสีขาวสว่างนวลตัดกับความมืดมิดของอวกาศ (Stark Chiaroscuro) 
+ศูนย์บัญชาการมอบหมายให้ผู้เล่นลอยตัวเข้าไปทำการ **Scan** เพื่อเก็บข้อมูลสเปกตรัมของดวงไฟเหล่านี้ ทว่าทุกครั้งที่ผู้เล่นสแกน รังสีและคลื่นลึกลับจะค่อยๆ ซึมลึกเข้าสู่ระบบประสาท ส่งผลให้ค่า **Sanity (สติสัมปชัญญะ)** เพิ่มระดับขึ้นเรื่อยๆ ซึ่งจะนำไปสู่ความผิดปกติทางจิตและภาพหลอนในระยะต่อไป
 
-### 2. Trigger Conditions
-- **Day / Loop**: กำหนดให้เกิดแบบ Scripted ใน Day 3 หรือเมื่อออกสำรวจระยะไกล
-- **Trigger Zone / Distance**: เมื่อผู้เล่นลอยตัวห่างจากตัวยานแม่ (Ship) เกิน 60 เมตร ในจุดอับสายตา
-- **Frequency Tune**: ผู้เล่นจูนคลื่นหาเป้าหมายภารกิจ หรือวิทยุถูก Forced Glitch จูนไปที่ `00.0 MHz`
+### 2. Trigger Conditions & Availability
+- **Day / Loop**: ปรากฏขึ้น **เฉพาะใน Day 3** เท่านั้น (Day 1 และ Day 2 วัตถุเหล่านี้จะซ่อนตัวอยู่ `SetActive(false)`)
+- **Interaction Method**: สแกนด้วยการลอยเข้าไปใกล้แล้ว **Hold [LMB] (2.0 วินาที)** ผ่าน `MissionInteractable`
+- **Radio Frequency (Optional)**: สามารถปล่อยคลื่นอ่อนๆ เช่น `166.6 MHz // [ANOMALY]` เพื่อให้นำทางหาได้ด้วยวิทยุ
 
-### 3. Staging Sequence (ลำดับเหตุการณ์)
+### 3. Sanity System (ค่าความคุ้มคลั่ง / สติสัมปชัญญะ)
+- **ตัวแปรหลัก**: `int sanity` บน `AstronautSurvival.cs`
+- **กลไกการเพิ่มค่า**:
+  - เริ่มต้นที่ `sanity = 0`
+  - ทุกครั้งที่ Scan ลูกบอลแสงสำเร็จ 1 ลูก: **`sanity += 1`** (พร้อมยิง Event `OnSanityChanged(sanity)`)
+  - ค่า Sanity นี้จะถูกนำไปใช้เป็น Threshold สำหรับทริกเกอร์ Element ความ Horror ในอนาคต (เช่น เสียงกระซิบในหมวก, ภาพเงาหลอนที่หางตา, การกะพริบของไฟฉาย, ความผิดปกติของหน้าปัด HUD)
+
+### 4. Staging Sequence (ลำดับเหตุการณ์ขณะ Scan)
 | ลำดับ | เหตุการณ์ | เสียง & วิชวล (Film Noir) |
 |---|---|---|
-| **1. วิทยุถูกแทรกแซง** | จู่ๆ จอ Signal Tracker มุมบนซ้ายจะกะพริบสั่น แล้วตัวเลขความถี่ถูกบังคับเลื่อนกลายเป็น `00.0 MHz // [UNKNOWN]` | เสียงคลื่น Static ซ่าแตกกระทันหัน |
-| **2. Oscilloscope Anomaly** | จอแสดงรูปคลื่น Oscilloscope ไม่แสดงคลื่น Sine ปกติ แต่จะแปรสภาพเป็น **เส้นตรงยาวราบเรียบ (Flatline)** หรือคลื่นรูปคล้ายฟันเลื่อยผิดธรรมชาติ | สีขาวดำ Stark Invert สลับไปมา |
-| **3. เสียงเคาะกระจกหมวก** | มีเสียงเคาะจากภายนอกกระจกหน้ากากผู้เล่น **"ก๊อก... ก๊อก... ก๊อก..."** ชัดเจน 3 ครั้ง (ทั้งที่รอบตัวในอวกาศไม่มีสิ่งใดลอยอยู่เลย) | คลื่นเสียงแรงกระทบเนื้อกระจก (Direct Visor Impact Audio) |
-| **4. ข้อความปริศนา** | หน้ากาก HUD แสดงหน้าต่าง Transmission Log กลางหน้าจอขึ้นมาเอง: <br>`>> INCOMING AUDIO TRANSMISSION`<br>`"...STOP LEAVING US OUT HERE..."` | ปรากฏอยู่ 3.5 วินาที แล้วสัญญาณจะดับวูบ กลับคืนสู่ความถี่ปกติทันที |
+| **1. ค้นพบดวงไฟ** | ลูกบอลแสงสีขาวลอยนิ่ง กระเพื่อมแผ่วเบาเหมือนกำลังหายใจ (Breathing Glow) ส่องเงาแข็งตัดกับเศษซากรอบตัว | เสียงฮัมความถี่สูงสะท้อนแผ่วเบาในสุญญากาศ (Ethereal Resonance) |
+| **2. ทำการสแกน (Hold [LMB])** | เมื่อเริ่มสแกน (0% - 100%) แสงของดวงไฟจะค่อยๆ เร่งความสว่างจ้าขึ้นเรื่อยๆ พร้อมความถี่เสียงที่สูงและแหลมขึ้น | เสียงกักเก็บพลังงานคล้ายหลอดสุญญากาศร้อนจัด |
+| **3. สแกนสำเร็จ (The Implosion)** | ดวงไฟกะพริบจ้า 1 ครั้ง (Stark Flash) ก่อนจะยุบตัวสลายวูบลง (Implosion) ดับหายไปอย่างถาวร | เสียงแก้วแตกสะท้อนเบาๆ ในหมวก (Resonant Pop) |
+| **4. ผลกระทบต่อผู้เล่น** | - ค่า `Sanity` เพิ่มขึ้น +1 <br>- หน้ากากเกิด CRT Visor Glitch สั้นๆ (0.35s)<br>- ชีพจรพุ่งกระฉูดทันที (Heart Rate Spike +30 BPM) | เสียงสูดหายใจหอบของผู้เล่นในหน้ากาก |
 
-### 4. Technical Integration Hooks
-- **Target Component**: `AstronautSignalHUD.cs` & `AstronautHelmetHUD.cs`
-- **Hooks**:
-  - `AstronautSignalHUD.OverrideDisplay("00.0 MHz", "[UNKNOWN]", flatlineMode: true)`
-  - `AstronautHelmetHUD.ShowMissionTransmission(">> INCOMING TRANSMISSION", "...STOP LEAVING US OUT HERE...", 3.5f)`
-  - `AstronautAudioSystem.PlayVisorKnockSound()`
+### 5. Technical Architecture Hooks
+- **Component**: `LuminousAnomaly.cs` (ควบคุม Visual, การลอยตัว, Point Light, เสียงฮัม และ Day 3 Lifecycle)
+- **Player Component**: `AstronautSurvival.cs` เพิ่มตัวแปร `public int Sanity { get; }` และฟังก์ชัน `IncreaseSanity(int amount = 1)`
+- **Interaction Hook**: ใช้ `MissionInteractable` (Type = `Custom`, HoldDuration = `2.0f`, RequiresActiveMission = `true`)
+- **Horror Escalation Hook**: `HorrorEventManager.cs` รับฟังสัญญาณ `OnSanityChanged` เพื่อเตรียมปลดล็อกความสยองขั้นต่อไปตามระดับ Sanity
 
 ---
 
@@ -123,20 +132,21 @@
 เพื่อให้ง่ายต่อการจัดการ Event ทั้งหมดโดยไม่ผูกติดแน่นกับระบบเดิม (Decoupled Design):
 
 ```
-DayCycleManager / MissionInteractable / FallenAstronautRecovery
-                             │
-                             ▼
-                    [HorrorEventManager]
-                             │
-    ┌────────────────┬───────┴────────┬────────────────┐
-    ▼                ▼                ▼                ▼
-O2 Explosion (Day 2) Corpse Stalker (Day 3) Phantom Radio   Helmet Visor FX
-(Suit 30% Leak)      (Head Turn + Strobe)   (Flatline Audio) (Blackout Strobe)
+DayCycleManager / MissionInteractable / FallenAstronautRecovery / LuminousAnomaly
+                                    │
+                                    ▼
+                          [HorrorEventManager]
+                                    │
+    ┌────────────────┬──────────────┴───────────────┬────────────────┐
+    ▼                ▼                              ▼                ▼
+O2 Explosion (Day 2) Corpse Stalker (Day 2 Loop)  Luminous Orbs   Sanity Distortion
+(Suit 15% Leak)      (Head Turn + Strobe)         (Day 3 Scanning) (Whispers & Glitches)
 ```
 
 1. **`HorrorEventManager` (Singleton / Scene Controller)**:
-   - ตรวจสอบ `DayCycleManager.Instance.CurrentDay`
+   - ตรวจสอบ `DayCycleManager.Instance.CurrentDay` และสถานะ `hasCorpseToRecover`
    - Day 1: ไม่มี Horror Event รันระบบ Tutorial ปลอดภัย
-   - Day 2: ควบคุม Event 0 (`TriggerO2StationExplosion`)
-   - Day 3: ควบคุม Event 1 (`HandleCorpseRecoveryProgress`, `TriggerCorpseJolt`) และ Event 2
-2. **State Management**: บันทึก One-Shot Flags ลงใน Session/Loop เพื่อให้ Event เกิดขึ้นตามลำดับเวลาที่ออกแบบไว้อย่างสมบูรณ์แบบ
+   - Day 2 (First Attempt): ควบคุม Event 0 (`TriggerO2StationRupture`)
+   - Day 2 (Loop Reset): ควบคุม Event 1 (`HandleCorpseRecoveryProgress`, `TriggerCorpseJolt`) เมื่อกู้ศพตัวเอง
+   - Day 3: ควบคุม Event 2 (เปิดการทำงานของ **Luminous Anomalies** และประมวลผล **Sanity System**)
+2. **State Management**: บันทึก One-Shot Flags และค่า Sanity เพื่อให้ Event เกิดขึ้นตามลำดับเวลาที่ออกแบบไว้อย่างสมบูรณ์แบบ

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using SpaceHorror.Player;
+using SpaceHorror.Gameplay;
 
 namespace SpaceHorror.Interaction
 {
@@ -51,6 +52,13 @@ namespace SpaceHorror.Interaction
 
         [Tooltip("Can this objective only be completed once, or repeatedly?")]
         [SerializeField] private bool isSingleUse = true;
+
+        [Header("Mission Contract Binding")]
+        [Tooltip("If true, this object can ONLY be interacted with when targeted by an active mission in DayCycleManager for the current day.\nIf false, acts as an ambient survival pickup (e.g. loose O2 canister) usable anytime.")]
+        [SerializeField] private bool requiresActiveMission = false;
+
+        [Tooltip("Feedback prompt shown on visor when aimed at while locked/unauthorized (e.g. 'STANDBY // NO CONTRACT AUTHORIZATION')")]
+        [SerializeField] private string unauthorizedPrompt = "STANDBY // NO CONTRACT AUTHORIZATION";
 
         [Header("Loop & Day Regeneration")]
         [Tooltip("Automatically resets this interactable when starting a fresh expedition day (normal completion / sleep)")]
@@ -139,7 +147,33 @@ namespace SpaceHorror.Interaction
             set => isSingleUse = value;
         }
         public bool IsCompleted => isCompleted;
-        public bool CanInteract => !isCompleted || !isSingleUse;
+        public bool RequiresActiveMission
+        {
+            get => requiresActiveMission;
+            set => requiresActiveMission = value;
+        }
+        public string UnauthorizedPrompt => unauthorizedPrompt;
+
+        public bool CanInteract
+        {
+            get
+            {
+                // 1. Single-use completion check
+                if (isCompleted && isSingleUse) return false;
+
+                // 2. Ambient survival pickups (loose O2, repair patches, ship doors) are always accessible
+                if (!requiresActiveMission) return true;
+
+                // 3. Mission-bound objectives require verification against DayCycleManager
+                if (DayCycleManager.Instance != null)
+                {
+                    return DayCycleManager.Instance.IsMissionActiveToday(this);
+                }
+
+                return false;
+            }
+        }
+
         public bool ResetOnNewDay { get => resetOnNewDay; set => resetOnNewDay = value; }
         public bool ResetOnLoop { get => resetOnLoop; set => resetOnLoop = value; }
         public string DataLogTranscript => dataLogTranscript;

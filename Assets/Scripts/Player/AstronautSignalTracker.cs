@@ -225,6 +225,27 @@ namespace SpaceHorror.Player
         }
 
         /// <summary>
+        /// Automatically tunes to a specific frequency (e.g. 121.5 MHz for AIRLOCK-HOME) or reverts to AUTO-SCAN if not found.
+        /// Useful when an objective or corpse beacon is secured and silenced.
+        /// </summary>
+        public void TuneToFrequency(float targetFrequencyMHz)
+        {
+            List<float> freqs = GetDistinctFrequencies();
+            for (int i = 0; i < freqs.Count; i++)
+            {
+                if (Mathf.Abs(freqs[i] - targetFrequencyMHz) < 0.15f)
+                {
+                    currentChannelIndex = i + 1;
+                    CycleChannel(0); // Refresh badge and fire events
+                    return;
+                }
+            }
+            // If target frequency is not currently broadcasting, revert cleanly to AUTO-SCAN
+            currentChannelIndex = 0;
+            CycleChannel(0);
+        }
+
+        /// <summary>
         /// Evaluates registered beacons in space and calculates alignment and distance metrics.
         /// </summary>
         private void EvaluateActiveBeacons()
@@ -232,6 +253,13 @@ namespace SpaceHorror.Player
             List<SignalBeacon> beacons = SignalBeacon.ActiveBeacons;
             List<float> distinctFreqs = GetDistinctFrequencies();
             int totalChannels = 1 + distinctFreqs.Count;
+
+            // If a beacon went offline and current tuned channel is now out of range, revert to AUTO-SCAN
+            if (currentChannelIndex >= totalChannels)
+            {
+                currentChannelIndex = 0;
+                CycleChannel(0);
+            }
 
             if (beacons == null || beacons.Count == 0)
             {

@@ -23,6 +23,8 @@ namespace SpaceHorror.Editor
         private SerializedProperty propMethod;
         private SerializedProperty propHoldDuration;
         private SerializedProperty propSingleUse;
+        private SerializedProperty propRequiresActiveMission;
+        private SerializedProperty propUnauthorizedPrompt;
         private SerializedProperty propResetOnNewDay;
         private SerializedProperty propResetOnLoop;
 
@@ -58,6 +60,8 @@ namespace SpaceHorror.Editor
             propMethod = serializedObject.FindProperty("interactionMethod");
             propHoldDuration = serializedObject.FindProperty("holdDuration");
             propSingleUse = serializedObject.FindProperty("isSingleUse");
+            propRequiresActiveMission = serializedObject.FindProperty("requiresActiveMission");
+            propUnauthorizedPrompt = serializedObject.FindProperty("unauthorizedPrompt");
             propResetOnNewDay = serializedObject.FindProperty("resetOnNewDay");
             propResetOnLoop = serializedObject.FindProperty("resetOnLoop");
 
@@ -114,6 +118,14 @@ namespace SpaceHorror.Editor
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(propResetOnNewDay, new GUIContent("Reset On New Day", "Automatically resets this interactable when starting a fresh expedition day (normal completion / sleep)"));
                 EditorGUILayout.PropertyField(propResetOnLoop, new GUIContent("Reset On Loop", "Automatically resets this interactable when reviving from death in a loop cycle (corpse recovery)"));
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.PropertyField(propRequiresActiveMission, new GUIContent("Requires Active Mission", "If true, this object can ONLY be interacted with when targeted by an active mission in DayCycleManager for the current day.\nIf false, acts as an ambient survival pickup (e.g. loose O2 canister) usable anytime."));
+            if (propRequiresActiveMission.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(propUnauthorizedPrompt, new GUIContent("Unauthorized Prompt", "Message displayed when the player aims at this station outside its active day (e.g. 'STANDBY // NO CONTRACT AUTHORIZATION')"));
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.Space(6);

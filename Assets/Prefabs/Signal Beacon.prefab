@@ -135,6 +135,10 @@ MonoBehaviour:
   interactionMethod: 1
   holdDuration: 1.5
   isSingleUse: 1
+  requiresActiveMission: 1
+  unauthorizedPrompt: STANDBY // NO CONTRACT AUTHORIZATION
+  resetOnNewDay: 1
+  resetOnLoop: 1
   oxygenAmount: 40
   suitRepairAmount: 35
   dataLogTranscript: 'TRANSMISSION LOG #07:

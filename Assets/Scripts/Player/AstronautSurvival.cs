@@ -67,6 +67,10 @@ namespace SpaceHorror.Player
         [SerializeField] private float currentBPM = 72f;
         [SerializeField] private float bpmTransitionSpeed = 2.5f;
 
+        [Header("Sanity & Psychological Horror")]
+        [Tooltip("Current sanity / cosmic exposure level. Increases each time an Anomaly is scanned.")]
+        [SerializeField] private int sanity = 0;
+
         // References
         private AstronautMovement6D movementController;
         private AstronautInputHandler inputHandler;
@@ -87,6 +91,7 @@ namespace SpaceHorror.Player
         public event Action OnPlayerAsphyxiated;                // Death event (0% O2)
         public event Action<GameObject> OnPlayerCorpseSpawned;  // Corpse instantiated event
         public event Action<float> OnSuitPunctured;             // Damage amount taken
+        public event Action<int> OnSanityChanged;               // Current sanity value
 
         // Public Getters
         public float CurrentOxygenNormalized => Mathf.Clamp01(currentOxygen / maxOxygen);
@@ -98,6 +103,7 @@ namespace SpaceHorror.Player
         public bool IsOxygenCritical => (currentOxygen / maxOxygen) <= (criticalOxygenThreshold / 100f);
         public bool IsAsphyxiated => isAsphyxiated;
         public bool HasSuitPuncture => currentSuitIntegrity < 99.9f;
+        public int Sanity => sanity;
         public GameObject CorpsePrefab { get => corpsePrefab; set => corpsePrefab = value; }
         public GameObject LastSpawnedCorpse => lastSpawnedCorpse;
         public bool PersistCorpsesForever { get => persistCorpsesForever; set => persistCorpsesForever = value; }
@@ -319,6 +325,25 @@ namespace SpaceHorror.Player
         }
 
         /// <summary>
+        /// Increases the player's sanity level upon scanning a cosmic anomaly.
+        /// </summary>
+        public void IncreaseSanity(int amount = 1)
+        {
+            sanity += amount;
+            OnSanityChanged?.Invoke(sanity);
+            Debug.Log($"<color=#FFFFFF><b>[Sanity]</b></color> Sanity increased to {sanity} (+{amount}).");
+        }
+
+        /// <summary>
+        /// Sets the player's sanity to a specific value.
+        /// </summary>
+        public void SetSanity(int value)
+        {
+            sanity = Mathf.Max(0, value);
+            OnSanityChanged?.Invoke(sanity);
+        }
+
+        /// <summary>
         /// Forces immediate player asphyxiation death, instantiating the corpse and invoking death events.
         /// </summary>
         public void TriggerAsphyxiation()
@@ -433,6 +458,17 @@ namespace SpaceHorror.Player
                 if (recovery != null)
                 {
                     recovery.Initialize(loopNumber, deathCount);
+
+                    // Event 1 is a fixed scripted anomaly specifically triggered on the corpse spawned after the Event 0 O2 rupture
+                    bool isEvent0Death = SpaceHorror.Gameplay.HorrorEventManager.Instance != null
+                                      && SpaceHorror.Gameplay.HorrorEventManager.Instance.HasTriggeredO2Explosion
+                                      && !SpaceHorror.Gameplay.HorrorEventManager.Instance.HasTriggeredCorpseEvent;
+
+                    recovery.IsUnsettledCorpseEvent = isEvent0Death;
+                    if (isEvent0Death)
+                    {
+                        Debug.Log("<color=#FFFFFF><b>[AstronautSurvival]</b></color> Designated this corpse as the fixed Event 1 ('The Unsettled Corpse') anomaly.");
+                    }
                 }
             }
             catch (Exception ex)

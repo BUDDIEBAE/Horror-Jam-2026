@@ -1484,6 +1484,116 @@ namespace SpaceHorror.Editor
             Debug.Log($"<color=#E2E8F0><b>[Space Horror]</b></color> Attached O2 Station Signal Beacon to {target.name} (156.8 MHz)");
         }
 
+        [MenuItem("Tools/Space Horror/4. Interaction & Signals/Create Luminous Anomaly Orb (Day 3)", false, 25)]
+        [MenuItem("GameObject/Space Horror/Create Luminous Anomaly Orb (Day 3)", false, 25)]
+        public static void CreateLuminousAnomalyOrb()
+        {
+            Vector3 spawnPos = Vector3.zero;
+            if (SceneView.lastActiveSceneView != null)
+            {
+                spawnPos = SceneView.lastActiveSceneView.pivot;
+            }
+
+            // 1. Create Sphere Primitive (includes MeshFilter, MeshRenderer, SphereCollider)
+            GameObject anomaly = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            anomaly.name = "Luminous_Anomaly_Orb";
+            anomaly.transform.position = spawnPos;
+            anomaly.transform.localScale = Vector3.one * 1.4f;
+
+            // 2. Set Material to Pure White Unlit Emissive
+            Renderer rend = anomaly.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
+                if (unlit == null) unlit = Shader.Find("Unlit/Color");
+                if (unlit == null) unlit = Shader.Find("Standard");
+
+                Material mat = new Material(unlit);
+                mat.name = "M_Luminous_Anomaly_Core";
+                mat.color = Color.white;
+                if (mat.HasProperty("_EmissionColor"))
+                {
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetColor("_EmissionColor", Color.white * 1.2f);
+                }
+                rend.sharedMaterial = mat;
+                rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                rend.receiveShadows = false;
+            }
+
+            // 3. Create Point Light child casting stark Film Noir hard shadows
+            GameObject lightObj = new GameObject("Orb_PointLight");
+            lightObj.transform.SetParent(anomaly.transform, false);
+            lightObj.transform.localPosition = Vector3.zero;
+
+            Light orbLight = lightObj.AddComponent<Light>();
+            orbLight.type = LightType.Point;
+            orbLight.color = Color.white;
+            orbLight.range = 7.0f;
+            orbLight.intensity = 1.5f;
+            orbLight.shadows = LightShadows.Hard;
+
+            // 4. Add 3D Positional AudioSource
+            AudioSource audio = anomaly.AddComponent<AudioSource>();
+            audio.playOnAwake = false;
+            audio.spatialBlend = 1.0f;
+            audio.minDistance = 2.0f;
+            audio.maxDistance = 18.0f;
+            audio.rolloffMode = AudioRolloffMode.Linear;
+
+            // 5. Add MissionInteractable
+            MissionInteractable interactable = anomaly.AddComponent<MissionInteractable>();
+            interactable.ConfigureRuntimePrompts(
+                "LUMINOUS ANOMALY // 166.6 MHz",
+                "SCAN ANOMALY",
+                "SPECTRAL EMISSION SECURED // SANITY ACCUMULATED"
+            );
+            interactable.ConfigureInteractionMethod(InteractionMethod.HoldToComplete, 2.0f, ObjectiveType.Custom);
+            interactable.IsSingleUse = true;
+            interactable.RequiresActiveMission = true;
+
+            // 6. Add SignalBeacon
+            SignalBeacon beacon = anomaly.AddComponent<SignalBeacon>();
+            beacon.Configure("ANOMALY", "LUMINOUS EMISSION [ANOMALY-01]", 166.6f, 140f, 3);
+
+            // 7. Add LuminousAnomaly component and link serialized references
+            LuminousAnomaly anomalyComp = anomaly.AddComponent<LuminousAnomaly>();
+            var so = new SerializedObject(anomalyComp);
+            so.FindProperty("orbLight").objectReferenceValue = orbLight;
+            so.FindProperty("orbRenderer").objectReferenceValue = rend;
+            so.ApplyModifiedProperties();
+
+            Undo.RegisterCreatedObjectUndo(anomaly, "Create Luminous Anomaly Orb");
+            Selection.activeGameObject = anomaly;
+
+            // 8. Save as connected Prefab in Assets/Prefabs/
+            string prefabPath = "Assets/Prefabs/Luminous_Anomaly_Orb.prefab";
+            PrefabUtility.SaveAsPrefabAssetAndConnect(anomaly, prefabPath, InteractionMode.AutomatedAction);
+
+            Debug.Log($"<color=#FFFFFF><b>[Space Horror]</b></color> Successfully created Luminous Anomaly Orb with visual sphere, point light, and prefab at {spawnPos}");
+        }
+
+        [MenuItem("Tools/Space Horror/1. Astronaut & Survival/Create Day 3 Awakening Point Anchor", false, 15)]
+        [MenuItem("GameObject/Space Horror/Create Day 3 Awakening Point Anchor", false, 15)]
+        public static void CreateDay3AwakeningPointAnchorMenu()
+        {
+            DayCycleManager director = Object.FindFirstObjectByType<DayCycleManager>();
+            if (director != null)
+            {
+                director.CreateDay3AwakeningPointAnchor();
+            }
+            else
+            {
+                GameObject anchor = new GameObject("Day 3 Awakening Point");
+                GameObject sp = GameObject.Find("Spawn Point");
+                Vector3 basePos = sp != null ? sp.transform.position : new Vector3(-45.15f, 13.85f, -69.96f);
+                anchor.transform.position = basePos + new Vector3(2.5f, 0f, 1.5f);
+                Undo.RegisterCreatedObjectUndo(anchor, "Create Day 3 Awakening Point");
+                Selection.activeGameObject = anchor;
+                Debug.Log($"<color=#55FF55><b>[Space Horror]</b></color> Created 'Day 3 Awakening Point' at {anchor.transform.position}.");
+            }
+        }
+
         #endregion
     }
 }

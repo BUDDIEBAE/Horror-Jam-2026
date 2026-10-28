@@ -136,7 +136,7 @@ namespace SpaceHorror.Interaction
         public float BroadcastFrequencyMHz => broadcastFrequencyMHz;
         public float MaxRange => Mathf.Max(1f, maxRange);
         public int Priority => priority;
-        public bool IsTransmitting => isTransmitting && gameObject.activeInHierarchy;
+        public bool IsTransmitting => isTransmitting && enabled && gameObject.activeInHierarchy;
         public bool DeactivateOnMissionComplete => deactiveOnMissionComplete;
         public Vector3 Position => transform.position;
 
@@ -169,6 +169,7 @@ namespace SpaceHorror.Interaction
         public void SetTransmitting(bool active)
         {
             isTransmitting = active;
+            enabled = active;
             if (active && !ActiveBeacons.Contains(this))
             {
                 ActiveBeacons.Add(this);

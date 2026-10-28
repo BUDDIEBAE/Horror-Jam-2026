@@ -158,6 +158,101 @@ namespace SpaceHorror.Player
         }
 
         /// <summary>
+        /// Public entry point to trigger a smooth biological eye-closing sleep transition.
+        /// Eyelids flutter shut to 100% black, calls onBlackoutReached (ideal for teleporting player),
+        /// holds in complete darkness, then flutters eyelids back open to wake up in the new environment.
+        /// </summary>
+        public void TriggerSleepAndWakeUp(float closeDuration = 1.8f, float blackoutPause = 1.2f, Action onBlackoutReached = null, Action onWakeUpComplete = null)
+        {
+            ResolveReferences();
+            if (activeTransitionCoroutine != null)
+            {
+                StopCoroutine(activeTransitionCoroutine);
+            }
+
+            activeTransitionCoroutine = StartCoroutine(SleepAndWakeUpRoutine(closeDuration, blackoutPause, onBlackoutReached, onWakeUpComplete));
+        }
+
+        private IEnumerator SleepAndWakeUpRoutine(float closeDuration, float blackoutPause, Action onBlackoutReached, Action onWakeUpComplete)
+        {
+            IsWakingUp = false;
+
+            // 1. Lock input immediately so player remains stationary as eyes close
+            if (inputHandler != null)
+            {
+                inputHandler.InputEnabled = false;
+            }
+
+            if (transitionCanvas != null)
+            {
+                transitionCanvas.gameObject.SetActive(true);
+            }
+
+            // 2. Smoothly close biological eyelids, slump chin down, and fade HUD
+            float elapsed = 0f;
+            while (elapsed < closeDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / closeDuration);
+
+                // Drowsy flutter closing curve:
+                // Eyes drop, flutter slightly up, then sink heavily shut
+                float eyeClosing;
+                if (t < 0.35f)
+                {
+                    eyeClosing = Mathf.Lerp(1.0f, 0.45f, t / 0.35f);
+                }
+                else if (t < 0.55f)
+                {
+                    // Brief struggle to keep eyes open
+                    eyeClosing = Mathf.Lerp(0.45f, 0.58f, (t - 0.35f) / 0.20f);
+                }
+                else
+                {
+                    // Heavy collapse of eyelids shut
+                    eyeClosing = Mathf.Lerp(0.58f, 0.0f, Mathf.SmoothStep(0f, 1f, (t - 0.55f) / 0.45f));
+                }
+
+                UpdateEyelidPositions(eyeClosing);
+
+                if (drowsyVignetteImage != null)
+                {
+                    float vignetteAlpha = Mathf.Lerp(0f, 1.0f, t);
+                    drowsyVignetteImage.color = new Color(0.01f, 0.01f, 0.02f, vignetteAlpha);
+                }
+
+                if (helmetHUD != null)
+                {
+                    helmetHUD.SetHUDAlpha(Mathf.Lerp(1.0f, 0f, t * 1.2f));
+                }
+
+                if (enableHeadLift && cameraRig != null)
+                {
+                    float currentPitch = Mathf.Lerp(0f, initialChinDownPitch, t);
+                    float currentRoll = Mathf.Lerp(0f, initialHeadRollTilt, t);
+                    cameraRig.SetExternalEulerOffset(new Vector3(currentPitch, 0f, currentRoll));
+                }
+
+                yield return null;
+            }
+
+            // 3. Absolute Pitch Black State (Eyelids 100% closed, zero light bleed)
+            ApplyInstantBlackoutState();
+
+            // 4. Invoke blackout callback: Teleport player, switch day, setup life support
+            onBlackoutReached?.Invoke();
+
+            // 5. Hold in total darkness for atmospheric tension & sound effects
+            if (blackoutPause > 0f)
+            {
+                yield return new WaitForSeconds(blackoutPause);
+            }
+
+            // 6. Seamlessly begin awakening sequence (eyelids opening, chin lifting up)
+            yield return StartCoroutine(WakeUpRoutine(onWakeUpComplete));
+        }
+
+        /// <summary>
         /// Public entry point to trigger the waking transition at any time (e.g. after respawn or cutscene).
         /// </summary>
         public void TriggerWakeUp(Action onComplete = null)

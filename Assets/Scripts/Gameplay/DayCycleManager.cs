@@ -42,10 +42,19 @@ namespace SpaceHorror.Gameplay
         [FormerlySerializedAs("shipSpawnPoint")]
         [SerializeField] private Transform spawnPoint;
 
+        [Tooltip("Dedicated awakening transform inside the ship after Day 3 concludes (NOT the standard spawn point). If assigned, player teleports here instead of Spawn Point.")]
+        [SerializeField] private Transform day3AwakeningPoint;
+
         public Transform SpawnPoint
         {
             get => spawnPoint;
             set => spawnPoint = value;
+        }
+
+        public Transform Day3AwakeningPoint
+        {
+            get => day3AwakeningPoint;
+            set => day3AwakeningPoint = value;
         }
 
         [Header("Daily Expeditions (List of Days -> Missions per Day)")]
@@ -158,6 +167,20 @@ namespace SpaceHorror.Gameplay
                     spawnPoint = returnAirlock.transform;
                 }
             }
+
+            if (day3AwakeningPoint == null)
+            {
+                GameObject d3 = GameObject.Find("Day 3 Awakening Point");
+                if (d3 == null) d3 = GameObject.Find("Day3AwakeningPoint");
+                if (d3 == null) d3 = GameObject.Find("Day 3 Spawn Point");
+                if (d3 == null) d3 = GameObject.Find("PostDay3AwakeningPoint");
+                if (d3 == null) d3 = GameObject.Find("Day3EndingPoint");
+                if (d3 != null)
+                {
+                    day3AwakeningPoint = d3.transform;
+                    Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Auto-detected Day 3 Awakening Point: '{d3.name}' at {day3AwakeningPoint.position}");
+                }
+            }
         }
 
         /// <summary>
@@ -204,16 +227,16 @@ namespace SpaceHorror.Gameplay
                 new DayExpeditionData
                 {
                     dayNumber = 3,
-                    dayTitle = "OPERATION: BLACKOUT SIGNAL",
-                    briefingTranscript = "ALERT // DAY 03:\n'Unidentified transponder pinging on emergency frequency 127.1 MHz deep within the debris field. Investigate origin and extract surviving logs.'",
-                    completionDebriefing = "EXPEDITION COMPLETE // DAY 03\nANOMALY LOG SECURED.\nCOMMENCING CRYO SLEEP PROTOCOL.",
+                    dayTitle = "OPERATION: LUMINOUS SPECTRA",
+                    briefingTranscript = "COMMAND ALERT // DAY 03:\n'Uncatalogued luminous anomalies detected adrift in Sector 3 (166.6 MHz). Approach radiant spheres and perform spectral scan. Exercise caution: anomalous radiation may induce neural distortion.'",
+                    completionDebriefing = "EXPEDITION COMPLETE // DAY 03\nANOMALOUS SPECTRAL DATA CATALOGUED.\nNEURAL EXPOSURE METRICS RECORDED.",
                     missions = new List<MissionObjectiveData>
                     {
                         new MissionObjectiveData
                         {
-                            directiveText = "INVESTIGATE DISTRESS TRANSMITTER",
-                            frequencyMHz = 127.1f,
-                            beaconTag = "DISTRESS"
+                            directiveText = "SCAN LUMINOUS ANOMALY",
+                            frequencyMHz = 166.6f,
+                            beaconTag = "ANOMALY"
                         }
                     }
                 }
@@ -255,8 +278,8 @@ namespace SpaceHorror.Gameplay
                 playerSurvival.RepairSuit(100f);
             }
 
-            // 2. Position player at spawn point
-            TeleportPlayerToSpawn();
+            // 2. Position player at spawn point or day's awakening point
+            TeleportPlayerToAnchor();
 
             // 3. Setup mission target beacons and listeners (preserving completed missions if recovering corpse)
             if (activeDay != null && activeDay.missions != null)
@@ -290,6 +313,7 @@ namespace SpaceHorror.Gameplay
 
             // 4. Regenerate world-space survival pickups (O2 canisters, suit repair stations)
             ResetSurvivalInteractables(hasCorpseToRecover);
+            SynchronizeMissionInteractables();
 
             // 5. Update Helmet Visor HUD
             if (helmetHUD != null)
@@ -436,6 +460,7 @@ namespace SpaceHorror.Gameplay
 
             currentState = ExpeditionState.EVA_InProgress;
             isTerminalContractAccepted = true;
+            SynchronizeMissionInteractables();
 
             // 1. Activate external target beacons and hook interaction listeners for each mission
             if (activeDay.missions != null)
@@ -623,39 +648,66 @@ namespace SpaceHorror.Gameplay
             currentState = ExpeditionState.TransitioningToNextDay;
             isDayConcluding = true;
 
-            // 1. Update HUD card & show single day debriefing report
-            UpdateHUDObjectiveCard();
-            if (helmetHUD != null && activeDay != null && !string.IsNullOrEmpty(activeDay.completionDebriefing))
+            // 1. Arrest remaining momentum & lock player input during airlock sequence
+            if (playerMovement != null)
             {
-                helmetHUD.ShowMissionTransmission("EXPEDITION DEBRIEFING", activeDay.completionDebriefing, 5.5f);
+                Rigidbody rb = playerMovement.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
             }
 
-            // 2. Lock player input during sleep sequence
             AstronautInputHandler input = FindFirstObjectByType<AstronautInputHandler>();
             if (input != null) input.InputEnabled = false;
 
-            yield return new WaitForSeconds(2.0f);
-
-            // 3. Fade out HUD
-            float fadeTime = 1.5f;
-            float t = 0f;
-            while (t < fadeTime)
+            // 2. Update HUD card & show single day debriefing report
+            UpdateHUDObjectiveCard();
+            if (helmetHUD != null && activeDay != null && !string.IsNullOrEmpty(activeDay.completionDebriefing))
             {
-                t += Time.deltaTime;
-                if (helmetHUD != null)
-                {
-                    helmetHUD.SetHUDAlpha(Mathf.Lerp(1f, 0f, t / fadeTime));
-                }
-                yield return null;
+                helmetHUD.ShowMissionTransmission("EXPEDITION DEBRIEFING", activeDay.completionDebriefing, 4.5f);
             }
 
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(2.0f);
 
-            OnDayEnded?.Invoke(currentDay);
+            // 3. Cinematic Biological Sleep & Awakening Transition
+            if (playerWakeUp == null) playerWakeUp = FindFirstObjectByType<AstronautWakeUpTransition>();
 
-            // 4. Increment Day and start next cycle
-            int nextDay = currentDay + 1;
-            StartDay(nextDay, true);
+            if (playerWakeUp != null)
+            {
+                bool transitionCompleted = false;
+
+                playerWakeUp.TriggerSleepAndWakeUp(
+                    closeDuration: 1.8f,
+                    blackoutPause: 1.2f,
+                    onBlackoutReached: () =>
+                    {
+                        // THIS RUNS WHEN SCREEN IS 100% PITCH BLACK!
+                        OnDayEnded?.Invoke(currentDay);
+
+                        int nextDay = currentDay + 1;
+                        StartDay(nextDay, triggerWakeUp: false);
+                    },
+                    onWakeUpComplete: () =>
+                    {
+                        transitionCompleted = true;
+                    }
+                );
+
+                while (!transitionCompleted)
+                {
+                    yield return null;
+                }
+            }
+            else
+            {
+                // Fallback if playerWakeUp is not available
+                yield return new WaitForSeconds(1.5f);
+                OnDayEnded?.Invoke(currentDay);
+                int nextDay = currentDay + 1;
+                StartDay(nextDay, true);
+            }
 
             dayTransitionCoroutine = null;
         }
@@ -702,19 +754,46 @@ namespace SpaceHorror.Gameplay
                 helmetHUD.ShowMissionTransmission("OXYGEN DEPLETED", "LIFE SUPPORT OFFLINE // EMERGENCY RECOVERY TO SHIP CRYOPOD...", 3.0f);
             }
 
-            yield return new WaitForSeconds(1.2f);
+            yield return new WaitForSeconds(1.0f);
 
-            // 3. Teleport immediately to spawn point
-            TeleportPlayerToSpawn();
+            // 3. Cinematic Biological Blackout & Emergency Awakening
+            if (playerWakeUp == null) playerWakeUp = FindFirstObjectByType<AstronautWakeUpTransition>();
 
-            yield return new WaitForSeconds(0.6f);
+            if (playerWakeUp != null)
+            {
+                bool rescueCompleted = false;
 
-            // 4. Mark loop recovery: Player died and must recover mission data from corpse
-            hasCorpseToRecover = true;
-            isCorpseDataRecoveredThisLoop = false;
+                playerWakeUp.TriggerSleepAndWakeUp(
+                    closeDuration: 1.2f,
+                    blackoutPause: 1.5f,
+                    onBlackoutReached: () =>
+                    {
+                        // 4. Mark loop recovery: Player died and must recover mission data from corpse
+                        hasCorpseToRecover = true;
+                        isCorpseDataRecoveredThisLoop = false;
 
-            // Restart current day inside ship (refills O2 & suit, sets top-left corpse recovery mission, triggers wake-up)
-            StartDay(currentDay, true);
+                        // Teleport and restart day inside ship while 100% blacked out
+                        StartDay(currentDay, triggerWakeUp: false);
+                    },
+                    onWakeUpComplete: () =>
+                    {
+                        rescueCompleted = true;
+                    }
+                );
+
+                while (!rescueCompleted)
+                {
+                    yield return null;
+                }
+            }
+            else
+            {
+                TeleportPlayerToAnchor(spawnPoint);
+                hasCorpseToRecover = true;
+                isCorpseDataRecoveredThisLoop = false;
+                StartDay(currentDay, true);
+            }
+
             dayTransitionCoroutine = null;
         }
 
@@ -833,19 +912,117 @@ namespace SpaceHorror.Gameplay
         }
 
         /// <summary>
-        /// Instantly teleports the player to the configured SpawnPoint, cancelling all inertia and angular drift.
+        /// Evaluates if the given interactable is an active, uncompleted mission objective for the current day.
+        /// Used by MissionInteractable.CanInteract to gate interaction.
+        /// </summary>
+        public bool IsMissionActiveToday(MissionInteractable interactable)
+        {
+            if (interactable == null) return false;
+
+            // During ship preparation (before signing contract at terminal), external EVA mission targets remain locked
+            if (currentState == ExpeditionState.InShip_AwaitingContract) return false;
+
+            // If player is in loop recovery (corpse recovery active), check if this is the corpse recovery target
+            if (hasCorpseToRecover && !isCorpseDataRecoveredThisLoop)
+            {
+                var recovery = interactable.GetComponent<FallenAstronautRecovery>();
+                if (recovery != null && !recovery.IsDataRecovered) return true;
+            }
+
+            // Check active daily missions
+            if (activeDay != null && activeDay.missions != null)
+            {
+                for (int i = 0; i < activeDay.missions.Count; i++)
+                {
+                    MissionObjectiveData m = activeDay.missions[i];
+                    if (m != null && m.targetInteractable == interactable && !m.isCompleted)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Synchronizes all mission-bound interactables in the scene.
+        /// Silences radio beacons and gates interactables for days other than the active day.
+        /// Ambient survival pickups (requiresActiveMission == false) are untouched.
+        /// </summary>
+        public void SynchronizeMissionInteractables()
+        {
+            MissionInteractable[] allInteractables = FindObjectsByType<MissionInteractable>(FindObjectsSortMode.None);
+            for (int i = 0; i < allInteractables.Length; i++)
+            {
+                MissionInteractable item = allInteractables[i];
+                if (item == null || !item.RequiresActiveMission) continue;
+
+                bool isTodayMission = IsMissionActiveToday(item);
+                SignalBeacon beacon = item.GetComponent<SignalBeacon>();
+                if (beacon != null)
+                {
+                    // Only transmit if this item is targeted by today's active mission AND contract has been signed
+                    bool shouldTransmit = isTodayMission && (currentState == ExpeditionState.EVA_InProgress);
+                    beacon.SetTransmitting(shouldTransmit);
+                }
+
+                LuminousAnomaly anomaly = item.GetComponent<LuminousAnomaly>();
+                if (anomaly != null)
+                {
+                    anomaly.EvaluateSleepState();
+                }
+            }
+
+            // Also ensure all anomaly orbs in the scene evaluate sleep state
+            LuminousAnomaly[] allAnomalies = FindObjectsByType<LuminousAnomaly>(FindObjectsSortMode.None);
+            for (int a = 0; a < allAnomalies.Length; a++)
+            {
+                if (allAnomalies[a] != null)
+                {
+                    allAnomalies[a].EvaluateSleepState();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Instantly teleports the player to the configured SpawnPoint or custom target anchor, cancelling all inertia and angular drift.
+        /// If targetAnchor is null, evaluates:
+        /// 1. activeDay.customAwakeningPoint (if configured for today)
+        /// 2. day3AwakeningPoint (if concluding Day 3 or starting Day 4+)
+        /// 3. Default spawnPoint
         /// </summary>
         [ContextMenu("Teleport Player To Spawn")]
         public void TeleportPlayerToSpawn()
         {
-            if (spawnPoint == null)
+            TeleportPlayerToAnchor(null);
+        }
+
+        public void TeleportPlayerToAnchor(Transform targetAnchor = null)
+        {
+            if (targetAnchor == null)
             {
-                ResolveReferences();
+                // 1. Check if active day has a custom awakening point configured
+                if (activeDay != null && activeDay.customAwakeningPoint != null)
+                {
+                    targetAnchor = activeDay.customAwakeningPoint;
+                }
+                // 2. Check if completing Day 3 or entering Day 4+ with day3AwakeningPoint assigned
+                else if ((currentDay >= 4 || (currentDay == 3 && isDayConcluding)) && day3AwakeningPoint != null)
+                {
+                    targetAnchor = day3AwakeningPoint;
+                }
+                // 3. Fallback to default spawn point
+                else
+                {
+                    if (spawnPoint == null) ResolveReferences();
+                    targetAnchor = spawnPoint;
+                }
             }
 
-            if (spawnPoint == null)
+            if (targetAnchor == null)
             {
-                Debug.LogWarning("<color=#FF9900><b>[DayCycleManager]</b></color> Cannot teleport: SpawnPoint Transform is not assigned!");
+                Debug.LogWarning("<color=#FF9900><b>[DayCycleManager]</b></color> Cannot teleport: Target anchor Transform is not assigned!");
                 return;
             }
 
@@ -874,21 +1051,46 @@ namespace SpaceHorror.Gameplay
                 {
                     rb.linearVelocity = Vector3.zero;
                     rb.angularVelocity = Vector3.zero;
-                    rb.position = spawnPoint.position;
-                    rb.rotation = spawnPoint.rotation;
+                    rb.position = targetAnchor.position;
+                    rb.rotation = targetAnchor.rotation;
                 }
 
-                rootTransform.position = spawnPoint.position;
-                rootTransform.rotation = spawnPoint.rotation;
+                rootTransform.position = targetAnchor.position;
+                rootTransform.rotation = targetAnchor.rotation;
                 if (targetTransform != rootTransform)
                 {
-                    targetTransform.position = spawnPoint.position;
-                    targetTransform.rotation = spawnPoint.rotation;
+                    targetTransform.position = targetAnchor.position;
+                    targetTransform.rotation = targetAnchor.rotation;
                 }
                 Physics.SyncTransforms();
 
-                Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Astronaut teleported to Spawnpoint '{spawnPoint.name}' at {spawnPoint.position}");
+                Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Astronaut teleported to '{targetAnchor.name}' at {targetAnchor.position}");
             }
         }
+
+#if UNITY_EDITOR
+        [ContextMenu("Create Day 3 Awakening Point Anchor")]
+        public void CreateDay3AwakeningPointAnchor()
+        {
+            if (day3AwakeningPoint != null)
+            {
+                UnityEditor.Selection.activeGameObject = day3AwakeningPoint.gameObject;
+                Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Day 3 Awakening Point already exists at {day3AwakeningPoint.position}");
+                return;
+            }
+
+            GameObject anchor = new GameObject("Day 3 Awakening Point");
+            Vector3 basePos = spawnPoint != null ? spawnPoint.position : new Vector3(-45.15f, 13.85f, -69.96f);
+            Quaternion baseRot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
+            anchor.transform.position = basePos + new Vector3(2.5f, 0f, 1.5f);
+            anchor.transform.rotation = baseRot;
+
+            day3AwakeningPoint = anchor.transform;
+            UnityEditor.Undo.RegisterCreatedObjectUndo(anchor, "Create Day 3 Awakening Point");
+            UnityEditor.EditorUtility.SetDirty(this);
+            UnityEditor.Selection.activeGameObject = anchor;
+            Debug.Log($"<color=#55FF55><b>[DayCycleManager]</b></color> Created 'Day 3 Awakening Point' at {anchor.transform.position}. You can move/rotate this transform in the Scene View.");
+        }
+#endif
     }
 }

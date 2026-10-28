@@ -67,6 +67,10 @@ namespace SpaceHorror.Gameplay
         [Header("Missions / Objectives for this Day")]
         [Tooltip("List of missions to complete in outer space during this day")]
         public List<MissionObjectiveData> missions = new List<MissionObjectiveData>();
+
+        [Header("Awakening & Spawn Anchor (Optional)")]
+        [Tooltip("Custom awakening/spawn point for this specific day. If unassigned, defaults to DayCycleManager's spawnPoint or day3AwakeningPoint.")]
+        public Transform customAwakeningPoint;
     }
 
     /// <summary>

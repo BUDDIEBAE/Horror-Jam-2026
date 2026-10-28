@@ -37,14 +37,14 @@ namespace SpaceHorror.Gameplay
         [Header("Runtime State")]
         [SerializeField] private bool hasTriggeredO2Explosion = false;
         [SerializeField] private bool hasTriggeredCorpseEvent = false;
-        [SerializeField] private bool hasTriggeredPhantomEvent = false;
+        [SerializeField] private int totalAnomaliesScanned = 0;
 
         private AudioSource horrorAudioSource;
         private AudioClip proceduralExplosionClip;
 
         public bool HasTriggeredO2Explosion => hasTriggeredO2Explosion;
         public bool HasTriggeredCorpseEvent => hasTriggeredCorpseEvent;
-        public bool HasTriggeredPhantomEvent => hasTriggeredPhantomEvent;
+        public int TotalAnomaliesScanned => totalAnomaliesScanned;
 
         private void Awake()
         {
@@ -236,11 +236,23 @@ namespace SpaceHorror.Gameplay
             return clip;
         }
 
+        public void NotifyCorpseEventCompleted()
+        {
+            hasTriggeredCorpseEvent = true;
+            Debug.Log("<color=#FFFFFF><b>[HorrorEventManager]</b></color> EVENT 1 COMPLETED: The Unsettled Corpse telemetry secured.");
+        }
+
+        public void NotifyAnomalyScanned(int currentSanity)
+        {
+            totalAnomaliesScanned++;
+            Debug.Log($"<color=#FFFFFF><b>[HorrorEventManager]</b></color> EVENT 2: Anomaly scanned! Total: {totalAnomaliesScanned}, Current Sanity: {currentSanity}.");
+        }
+
         public void ResetForNewGame()
         {
             hasTriggeredO2Explosion = false;
             hasTriggeredCorpseEvent = false;
-            hasTriggeredPhantomEvent = false;
+            totalAnomaliesScanned = 0;
         }
     }
 }

@@ -219,6 +219,49 @@ namespace SpaceHorror.UI
         }
 
         /// <summary>
+        /// Rapid high-contrast black/white strobe glitch overlay for jump scares and EMP anomalies.
+        /// Adheres strictly to Film Noir aesthetics (pure stark monochrome).
+        /// </summary>
+        public void TriggerVisorGlitch(float duration = 0.40f)
+        {
+            EnsureNoirFlashOverlay();
+            if (noirFlashImage != null)
+            {
+                StartCoroutine(RoutineVisorGlitch(duration));
+            }
+        }
+
+        private System.Collections.IEnumerator RoutineVisorGlitch(float duration)
+        {
+            if (noirFlashImage == null) yield break;
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += 0.045f;
+                float r = UnityEngine.Random.value;
+                if (r > 0.65f)
+                {
+                    noirFlashImage.color = new Color(1f, 1f, 1f, 0.40f); // Stark white flash
+                }
+                else if (r < 0.25f)
+                {
+                    noirFlashImage.color = new Color(0f, 0f, 0f, 0.55f); // Contrast blackout cutout
+                }
+                else
+                {
+                    noirFlashImage.color = new Color(1f, 1f, 1f, 0f);
+                }
+                yield return new WaitForSeconds(0.045f);
+            }
+
+            if (noirFlashImage != null)
+            {
+                noirFlashImage.color = new Color(1f, 1f, 1f, 0f);
+            }
+        }
+
+        /// <summary>
         /// Repositions the Tools panel (RCS & Lamp) to the Top-Right corner so it never collides with the Signal Tracker.
         /// </summary>
         private void EnsureToolsPanelLayout()

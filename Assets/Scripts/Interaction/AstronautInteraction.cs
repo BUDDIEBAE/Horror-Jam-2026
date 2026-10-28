@@ -40,6 +40,7 @@ namespace SpaceHorror.Interaction
 
         // Runtime Target Tracking
         private MissionInteractable currentTarget = null;
+        private MissionInteractable unauthorizedTarget = null;
         private float holdTimer = 0f;
         private bool isHolding = false;
 
@@ -99,16 +100,26 @@ namespace SpaceHorror.Interaction
             RaycastHit hit;
 
             MissionInteractable detected = null;
+            MissionInteractable unauthorized = null;
 
             // SphereCast gives smooth, forgiving zero-g raycasting
             if (Physics.SphereCast(ray, sphereCastRadius, out hit, reachDistance, interactionLayers, QueryTriggerInteraction.Collide))
             {
                 var candidate = hit.collider.GetComponentInParent<MissionInteractable>();
-                if (candidate != null && candidate.CanInteract)
+                if (candidate != null)
                 {
-                    detected = candidate;
+                    if (candidate.CanInteract)
+                    {
+                        detected = candidate;
+                    }
+                    else if (candidate.RequiresActiveMission && !candidate.IsCompleted)
+                    {
+                        unauthorized = candidate;
+                    }
                 }
             }
+
+            unauthorizedTarget = unauthorized;
 
             // Target changed
             if (detected != currentTarget)
@@ -164,6 +175,11 @@ namespace SpaceHorror.Interaction
                 Vector3 promptPos = currentTarget.GetPromptWorldPosition(playerCamera.transform.position, playerCamera.transform.up);
 
                 worldPrompt.Show(promptPos, currentTarget.transform, "LMB", currentTarget.ActionPrompt, currentTarget.ObjectiveTitle, progress, isHold);
+            }
+            else if (unauthorizedTarget != null)
+            {
+                Vector3 promptPos = unauthorizedTarget.GetPromptWorldPosition(playerCamera.transform.position, playerCamera.transform.up);
+                worldPrompt.Show(promptPos, unauthorizedTarget.transform, "LOCK", unauthorizedTarget.UnauthorizedPrompt, unauthorizedTarget.ObjectiveTitle, 0f, false);
             }
             else
             {
