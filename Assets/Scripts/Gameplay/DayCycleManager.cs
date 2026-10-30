@@ -495,6 +495,20 @@ namespace SpaceHorror.Gameplay
             Debug.Log($"<color=#FFFFFF><b>[DayCycleManager]</b></color> Contract signed for DAY {currentDay} ({activeDay.dayTitle})");
         }
 
+        /// <summary>
+        /// Public entry point to explicitly complete a mission objective.
+        /// </summary>
+        public void CompleteMissionObjective(MissionObjectiveData mission, GameObject player = null)
+        {
+            if (activeDay == null || mission == null) return;
+            if (currentState == ExpeditionState.InShip_AwaitingContract)
+            {
+                currentState = ExpeditionState.EVA_InProgress;
+                isTerminalContractAccepted = true;
+            }
+            HandleObjectiveInteracted(mission, player);
+        }
+
         private void HandleObjectiveInteracted(MissionObjectiveData mission, GameObject player)
         {
             if (currentState != ExpeditionState.EVA_InProgress || activeDay == null) return;

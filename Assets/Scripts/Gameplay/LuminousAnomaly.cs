@@ -71,6 +71,34 @@ namespace SpaceHorror.Gameplay
         [Tooltip("Audio played upon completing spectral scan")]
         [SerializeField] private AudioClip customScanCompleteAudioClip;
 
+        [Header("Particle Effects")]
+        [Tooltip("Particle effect prefab instantiated when scan/interaction completes (e.g. spectral burst, implosion flash, debris dust).")]
+        [SerializeField] private GameObject interactionParticlePrefab;
+
+        [Tooltip("Optional existing ParticleSystem component in children to play when scan completes.")]
+        [SerializeField] private ParticleSystem interactionParticleSystem;
+
+        [Tooltip("Custom spawn transform for the particle effect. If null, spawns at the anomaly position.")]
+        [SerializeField] private Transform particleSpawnAnchor;
+
+        public GameObject InteractionParticlePrefab
+        {
+            get => interactionParticlePrefab;
+            set => interactionParticlePrefab = value;
+        }
+
+        public ParticleSystem InteractionParticleSystem
+        {
+            get => interactionParticleSystem;
+            set => interactionParticleSystem = value;
+        }
+
+        public Transform ParticleSpawnAnchor
+        {
+            get => particleSpawnAnchor;
+            set => particleSpawnAnchor = value;
+        }
+
         // References & Runtime States
         private MissionInteractable interactable;
         private SignalBeacon signalBeacon;
@@ -537,12 +565,15 @@ namespace SpaceHorror.Gameplay
 
         /// <summary>
         /// Triggered when the scan reaches 100% completion.
-        /// Increases Sanity, spikes heart rate, flashes visor, and implodes the anomaly.
+        /// Increases Sanity, spikes heart rate, flashes visor, spawns particle, and implodes the anomaly.
         /// </summary>
         private void HandleScanCompleted(GameObject player)
         {
             if (isScanned) return;
             isScanned = true;
+
+            // Spawn particle effects with strict null safety guards
+            SpawnInteractionParticles();
 
             // 1. Increase Player Sanity
             AstronautSurvival survival = player != null ? player.GetComponent<AstronautSurvival>() : FindFirstObjectByType<AstronautSurvival>();
@@ -599,6 +630,37 @@ namespace SpaceHorror.Gameplay
             }
 
             Debug.Log($"<color=#FFFFFF><b>[LuminousAnomaly]</b></color> Anomaly '{anomalyId}' scanned successfully! Sanity increased by {sanityGain}.");
+        }
+
+        /// <summary>
+        /// Spawns or plays the assigned interaction particle effect with strict null safety guards.
+        /// </summary>
+        public void SpawnInteractionParticles()
+        {
+            // Null safety-guard: Check if particle prefab is assigned
+            if (interactionParticlePrefab != null)
+            {
+                Vector3 spawnPos = particleSpawnAnchor != null ? particleSpawnAnchor.position : transform.position;
+                Quaternion spawnRot = particleSpawnAnchor != null ? particleSpawnAnchor.rotation : Quaternion.identity;
+
+                GameObject spawned = Instantiate(interactionParticlePrefab, spawnPos, spawnRot);
+                if (spawned != null)
+                {
+                    ParticleSystem ps = spawned.GetComponent<ParticleSystem>();
+                    if (ps != null)
+                    {
+                        ps.Play();
+                        float maxDuration = ps.main.duration + ps.main.startLifetime.constantMax;
+                        Destroy(spawned, Mathf.Max(maxDuration, 3.5f));
+                    }
+                }
+            }
+
+            // Null safety-guard: Check if particle system component is assigned
+            if (interactionParticleSystem != null)
+            {
+                interactionParticleSystem.Play();
+            }
         }
 
         private IEnumerator RoutineImplosion()

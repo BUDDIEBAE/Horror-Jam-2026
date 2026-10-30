@@ -24,6 +24,7 @@ namespace SpaceHorror.Editor
         private SerializedProperty propHoldDuration;
         private SerializedProperty propSingleUse;
         private SerializedProperty propRequiresActiveMission;
+        private SerializedProperty propIsLocked;
         private SerializedProperty propUnauthorizedPrompt;
         private SerializedProperty propResetOnNewDay;
         private SerializedProperty propResetOnLoop;
@@ -44,7 +45,11 @@ namespace SpaceHorror.Editor
         private SerializedProperty propVisualRenderer;
         private SerializedProperty propCustomOutlineMaterial;
 
-        // 5. Designer Callbacks
+        // 5. Particle Effects
+        private SerializedProperty propInteractionParticlePrefab;
+        private SerializedProperty propInteractionParticleSystem;
+
+        // 6. Designer Callbacks
         private SerializedProperty propOnInteracted;
         private SerializedProperty propOnHoldProgress;
 
@@ -61,6 +66,7 @@ namespace SpaceHorror.Editor
             propHoldDuration = serializedObject.FindProperty("holdDuration");
             propSingleUse = serializedObject.FindProperty("isSingleUse");
             propRequiresActiveMission = serializedObject.FindProperty("requiresActiveMission");
+            propIsLocked = serializedObject.FindProperty("isLocked");
             propUnauthorizedPrompt = serializedObject.FindProperty("unauthorizedPrompt");
             propResetOnNewDay = serializedObject.FindProperty("resetOnNewDay");
             propResetOnLoop = serializedObject.FindProperty("resetOnLoop");
@@ -80,6 +86,10 @@ namespace SpaceHorror.Editor
             propPulseOutline = serializedObject.FindProperty("pulseOutline");
             propVisualRenderer = serializedObject.FindProperty("visualRenderer");
             propCustomOutlineMaterial = serializedObject.FindProperty("customOutlineMaterial");
+
+            // Particle Effects
+            propInteractionParticlePrefab = serializedObject.FindProperty("interactionParticlePrefab");
+            propInteractionParticleSystem = serializedObject.FindProperty("interactionParticleSystem");
 
             // Events
             propOnInteracted = serializedObject.FindProperty("onInteracted");
@@ -122,10 +132,12 @@ namespace SpaceHorror.Editor
             }
 
             EditorGUILayout.PropertyField(propRequiresActiveMission, new GUIContent("Requires Active Mission", "If true, this object can ONLY be interacted with when targeted by an active mission in DayCycleManager for the current day.\nIf false, acts as an ambient survival pickup (e.g. loose O2 canister) usable anytime."));
-            if (propRequiresActiveMission.boolValue)
+            EditorGUILayout.PropertyField(propIsLocked, new GUIContent("Is Locked", "If true, manually seals/locks this interactable, preventing interaction and displaying the unauthorized prompt."));
+
+            if (propRequiresActiveMission.boolValue || propIsLocked.boolValue)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(propUnauthorizedPrompt, new GUIContent("Unauthorized Prompt", "Message displayed when the player aims at this station outside its active day (e.g. 'STANDBY // NO CONTRACT AUTHORIZATION')"));
+                EditorGUILayout.PropertyField(propUnauthorizedPrompt, new GUIContent("Unauthorized / Locked Prompt", "Message displayed when the player aims at this station while locked or unauthorized (e.g. 'STANDBY // NO CONTRACT AUTHORIZATION')"));
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.Space(6);
@@ -170,7 +182,13 @@ namespace SpaceHorror.Editor
             EditorGUILayout.PropertyField(propCustomOutlineMaterial, new GUIContent("Custom Outline Material", "Optional override material. If null, automatically loads Resources/Materials/M_InteractableOutline."));
             EditorGUILayout.Space(6);
 
-            // --- 5. Designer Callbacks ---
+            // --- 5. Particle Effects ---
+            EditorGUILayout.LabelField("Completion Particle Effects", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(propInteractionParticlePrefab, new GUIContent("Particle Prefab", "Optional particle prefab spawned when interaction completes (null safe)"));
+            EditorGUILayout.PropertyField(propInteractionParticleSystem, new GUIContent("Particle System", "Optional ParticleSystem already on this object to play upon completion (null safe)"));
+            EditorGUILayout.Space(6);
+
+            // --- 6. Designer Callbacks ---
             EditorGUILayout.LabelField("Designer Callbacks", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(propOnInteracted, new GUIContent("On Interacted (GameObject)"));
 

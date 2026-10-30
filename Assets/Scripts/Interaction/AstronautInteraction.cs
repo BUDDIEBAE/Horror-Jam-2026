@@ -112,7 +112,7 @@ namespace SpaceHorror.Interaction
                     {
                         detected = candidate;
                     }
-                    else if (candidate.RequiresActiveMission && !candidate.IsCompleted)
+                    else if ((candidate.RequiresActiveMission || candidate.IsLocked) && !candidate.IsCompleted)
                     {
                         unauthorized = candidate;
                     }

@@ -185,6 +185,7 @@ MonoBehaviour:
   holdDuration: 2
   isSingleUse: 1
   requiresActiveMission: 1
+  isLocked: 0
   unauthorizedPrompt: UNKNOWN
   resetOnNewDay: 0
   resetOnLoop: 0
@@ -203,6 +204,8 @@ MonoBehaviour:
   pulseOutline: 1
   visualRenderer: {fileID: 0}
   customOutlineMaterial: {fileID: 0}
+  interactionParticlePrefab: {fileID: 0}
+  interactionParticleSystem: {fileID: 0}
   onInteracted:
     m_PersistentCalls:
       m_Calls: []
@@ -238,6 +241,9 @@ MonoBehaviour:
   floatFrequency: 0.65
   customHumAudioClip: {fileID: 0}
   customScanCompleteAudioClip: {fileID: 0}
+  interactionParticlePrefab: {fileID: 0}
+  interactionParticleSystem: {fileID: 0}
+  particleSpawnAnchor: {fileID: 0}
 --- !u!135 &1818305284767708563
 SphereCollider:
   m_ObjectHideFlags: 0

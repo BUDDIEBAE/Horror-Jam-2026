@@ -57,6 +57,9 @@ namespace SpaceHorror.Interaction
         [Tooltip("If true, this object can ONLY be interacted with when targeted by an active mission in DayCycleManager for the current day.\nIf false, acts as an ambient survival pickup (e.g. loose O2 canister) usable anytime.")]
         [SerializeField] private bool requiresActiveMission = false;
 
+        [Tooltip("If true, manually seals/locks this interactable, preventing interaction and displaying unauthorized prompt.")]
+        [SerializeField] private bool isLocked = false;
+
         [Tooltip("Feedback prompt shown on visor when aimed at while locked/unauthorized (e.g. 'STANDBY // NO CONTRACT AUTHORIZATION')")]
         [SerializeField] private string unauthorizedPrompt = "STANDBY // NO CONTRACT AUTHORIZATION";
 
@@ -99,7 +102,7 @@ namespace SpaceHorror.Interaction
         [SerializeField] private float outlineWidth = 0.025f;
 
         [Tooltip("Color of the outer border outline")]
-        [SerializeField] private Color highlightColor = new Color(0.35f, 0.85f, 1.0f, 1.0f);
+        [SerializeField] private Color highlightColor = new Color(1.0f, 1.0f, 1.0f, 0.95f); // Pure Film Noir Stark White
 
         [Tooltip("Pulse the outline thickness gently as a breathing cue")]
         [SerializeField] private bool pulseOutline = true;
@@ -109,6 +112,13 @@ namespace SpaceHorror.Interaction
 
         [Tooltip("Optional custom outline material. If null, automatically uses Resources/Materials/M_InteractableOutline.")]
         [SerializeField] private Material customOutlineMaterial;
+
+        [Header("Completion Particle Effect")]
+        [Tooltip("Optional particle effect prefab spawned when interaction completes.")]
+        [SerializeField] private GameObject interactionParticlePrefab;
+
+        [Tooltip("Optional ParticleSystem already on this object to play upon interaction completion.")]
+        [SerializeField] private ParticleSystem interactionParticleSystem;
 
         [Header("Designer Callbacks (Unity Events)")]
         [Tooltip("Fires when the interaction successfully completes")]
@@ -152,7 +162,18 @@ namespace SpaceHorror.Interaction
             get => requiresActiveMission;
             set => requiresActiveMission = value;
         }
-        public string UnauthorizedPrompt => unauthorizedPrompt;
+
+        public bool IsLocked
+        {
+            get => isLocked;
+            set => isLocked = value;
+        }
+
+        public string UnauthorizedPrompt
+        {
+            get => unauthorizedPrompt;
+            set => unauthorizedPrompt = value;
+        }
 
         public bool CanInteract
         {
@@ -161,10 +182,13 @@ namespace SpaceHorror.Interaction
                 // 1. Single-use completion check
                 if (isCompleted && isSingleUse) return false;
 
-                // 2. Ambient survival pickups (loose O2, repair patches, ship doors) are always accessible
+                // 2. Explicit manual lock state
+                if (isLocked) return false;
+
+                // 3. Ambient survival pickups (loose O2, repair patches, ship doors) are always accessible
                 if (!requiresActiveMission) return true;
 
-                // 3. Mission-bound objectives require verification against DayCycleManager
+                // 4. Mission-bound objectives require verification against DayCycleManager
                 if (DayCycleManager.Instance != null)
                 {
                     return DayCycleManager.Instance.IsMissionActiveToday(this);
@@ -178,6 +202,18 @@ namespace SpaceHorror.Interaction
         public bool ResetOnLoop { get => resetOnLoop; set => resetOnLoop = value; }
         public string DataLogTranscript => dataLogTranscript;
         public AudioClip AudioLogClip => customAudioLogClip;
+
+        public GameObject InteractionParticlePrefab
+        {
+            get => interactionParticlePrefab;
+            set => interactionParticlePrefab = value;
+        }
+
+        public ParticleSystem InteractionParticleSystem
+        {
+            get => interactionParticleSystem;
+            set => interactionParticleSystem = value;
+        }
 
         /// <summary>
         /// Updates the prompts dynamically at runtime (e.g. when state changes from 'Accept Contract' to 'In Progress').
@@ -491,8 +527,42 @@ namespace SpaceHorror.Interaction
                 }
             }
 
+            // Spawn completion particle effect with strict null safety guards
+            SpawnInteractionParticles();
+
             // Invoke designer UnityEvent
             onInteracted?.Invoke(player);
+        }
+
+        /// <summary>
+        /// Spawns or plays the assigned interaction particle effect with strict null safety guards.
+        /// </summary>
+        public void SpawnInteractionParticles()
+        {
+            // Null safety-guard: Check if particle prefab is assigned
+            if (interactionParticlePrefab != null)
+            {
+                Vector3 spawnPos = promptAnchor != null ? promptAnchor.position : transform.position;
+                Quaternion spawnRot = promptAnchor != null ? promptAnchor.rotation : Quaternion.identity;
+
+                GameObject spawned = Instantiate(interactionParticlePrefab, spawnPos, spawnRot);
+                if (spawned != null)
+                {
+                    ParticleSystem ps = spawned.GetComponent<ParticleSystem>();
+                    if (ps != null)
+                    {
+                        ps.Play();
+                        float maxDuration = ps.main.duration + ps.main.startLifetime.constantMax;
+                        Destroy(spawned, Mathf.Max(maxDuration, 3.5f));
+                    }
+                }
+            }
+
+            // Null safety-guard: Check if particle system component is assigned
+            if (interactionParticleSystem != null)
+            {
+                interactionParticleSystem.Play();
+            }
         }
 
         /// <summary>

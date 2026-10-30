@@ -11,6 +11,7 @@ namespace SpaceHorror.Gameplay
     /// Emits a continuous homing beacon on 121.5 MHz ('AIRLOCK-HOME') so the player can always
     /// navigate back through zero-gravity space.
     /// Interacting cycles the airlock, concludes the daily expedition, and triggers the day transition.
+    /// Sealed & locked if daily contract objectives are incomplete.
     /// </summary>
     [RequireComponent(typeof(MissionInteractable))]
     [RequireComponent(typeof(SignalBeacon))]
@@ -19,23 +20,55 @@ namespace SpaceHorror.Gameplay
         [Header("Airlock Identity")]
         [SerializeField] private string airlockName = "EVA AIRLOCK & EXTRACTION DOCK";
 
+        [Header("Contract Enforcement")]
+        [Tooltip("If true, the return airlock is sealed and locked until all daily contract objectives are completed. If false, player can abort anytime.")]
+        [SerializeField] private bool requireContractCompletion = true;
+
+        [Tooltip("Feedback prompt shown on visor when aiming at airlock while contract is still incomplete.")]
+        [SerializeField] private string lockedAirlockPrompt = "AIRLOCK LOCKED // CONTRACT INCOMPLETE";
+
         [Header("Homing Beacon Settings")]
         [SerializeField] private float homingFrequencyMHz = 121.5f;
         [SerializeField] private float beaconRange = 250f;
+
+        [Header("Visual Feedback")]
+        [Tooltip("Optional status indicator light (Amber/Red when sealed, Green/Cyan when unlocked & ready).")]
+        [SerializeField] private Light statusLight;
 
         [Header("Audio Feedback")]
         [Tooltip("Optional custom airlock pressurization / door cycle sound. If null, procedural pneumatic hiss is generated.")]
         [SerializeField] private AudioClip customAirlockCycleClip;
 
+        [Tooltip("Optional custom access denied buzzer sound. If null, procedural denied buzz is generated.")]
+        [SerializeField] private AudioClip customAirlockLockedClip;
+
         private MissionInteractable interactable;
         private SignalBeacon homingBeacon;
         private AudioSource airlockAudioSource;
         private AudioClip activeCycleClip;
+        private AudioClip activeLockedClip;
+
+        public bool RequireContractCompletion
+        {
+            get => requireContractCompletion;
+            set
+            {
+                requireContractCompletion = value;
+                RefreshAirlockPrompts();
+            }
+        }
+
+        public bool CanCycleAirlock => !requireContractCompletion || (DayCycleManager.Instance != null && DayCycleManager.Instance.IsDailyObjectiveCompleted);
 
         private void Awake()
         {
             interactable = GetComponent<MissionInteractable>();
             homingBeacon = GetComponent<SignalBeacon>();
+
+            if (statusLight == null)
+            {
+                statusLight = GetComponentInChildren<Light>();
+            }
 
             ConfigureHomingBeacon();
             SetupAirlockAudio();
@@ -67,6 +100,7 @@ namespace SpaceHorror.Gameplay
             airlockAudioSource.rolloffMode = AudioRolloffMode.Linear;
 
             activeCycleClip = customAirlockCycleClip != null ? customAirlockCycleClip : GenerateProceduralAirlockHiss();
+            activeLockedClip = customAirlockLockedClip != null ? customAirlockLockedClip : GenerateProceduralDeniedBuzz();
         }
 
         private void ConfigureInteractableDefaults()
@@ -74,36 +108,60 @@ namespace SpaceHorror.Gameplay
             if (interactable != null)
             {
                 interactable.IsSingleUse = false; // Airlock is used repeatedly across all days
+                interactable.onInteracted.RemoveListener(HandleAirlockInteracted);
                 interactable.onInteracted.AddListener(HandleAirlockInteracted);
             }
         }
 
         private void OnEnable()
         {
-            if (DayCycleManager.Instance != null)
-            {
-                DayCycleManager.Instance.OnMissionCompleted += HandleMissionCompleted;
-                DayCycleManager.Instance.OnDayStarted += HandleDayStarted;
-            }
+            SubscribeToDayCycleManager();
         }
 
         private void OnDisable()
         {
-            if (DayCycleManager.Instance != null)
-            {
-                DayCycleManager.Instance.OnMissionCompleted -= HandleMissionCompleted;
-                DayCycleManager.Instance.OnDayStarted -= HandleDayStarted;
-            }
+            UnsubscribeFromDayCycleManager();
         }
 
         private void Start()
         {
+            SubscribeToDayCycleManager();
             ResetAirlock();
+        }
+
+        private void SubscribeToDayCycleManager()
+        {
+            if (DayCycleManager.Instance != null)
+            {
+                DayCycleManager.Instance.OnDayStarted -= HandleDayStarted;
+                DayCycleManager.Instance.OnDayStarted += HandleDayStarted;
+
+                DayCycleManager.Instance.OnMissionAccepted -= HandleMissionAccepted;
+                DayCycleManager.Instance.OnMissionAccepted += HandleMissionAccepted;
+
+                DayCycleManager.Instance.OnMissionCompleted -= HandleMissionCompleted;
+                DayCycleManager.Instance.OnMissionCompleted += HandleMissionCompleted;
+            }
+        }
+
+        private void UnsubscribeFromDayCycleManager()
+        {
+            if (DayCycleManager.Instance != null)
+            {
+                DayCycleManager.Instance.OnDayStarted -= HandleDayStarted;
+                DayCycleManager.Instance.OnMissionAccepted -= HandleMissionAccepted;
+                DayCycleManager.Instance.OnMissionCompleted -= HandleMissionCompleted;
+            }
         }
 
         private void HandleDayStarted(int day, DayExpeditionData dayData)
         {
             ResetAirlock();
+        }
+
+        private void HandleMissionAccepted(DayExpeditionData dayData)
+        {
+            RefreshAirlockPrompts();
         }
 
         private void HandleMissionCompleted(DayExpeditionData dayData)
@@ -139,28 +197,55 @@ namespace SpaceHorror.Gameplay
             interactable.IsSingleUse = false;
             interactable.ResetObjective();
 
-            bool isDone = DayCycleManager.Instance != null && DayCycleManager.Instance.IsDailyObjectiveCompleted;
+            bool isContractDone = DayCycleManager.Instance != null && DayCycleManager.Instance.IsDailyObjectiveCompleted;
 
-            if (isDone)
+            if (!requireContractCompletion || isContractDone)
             {
+                interactable.IsLocked = false;
                 interactable.ConfigureRuntimePrompts(
                     airlockName,
                     "CYCLE AIRLOCK & SLEEP",
                     "AIRLOCK PRESSURIZING // DOCKING COMPLETE"
                 );
+
+                if (statusLight != null)
+                {
+                    statusLight.color = Color.white; // Pure Film Noir Stark White
+                }
             }
             else
             {
+                interactable.IsLocked = true;
+                interactable.UnauthorizedPrompt = lockedAirlockPrompt;
                 interactable.ConfigureRuntimePrompts(
                     airlockName,
-                    "ABORT EXPEDITION & SLEEP",
-                    "EXPEDITION ABORTED"
+                    "AIRLOCK SEALED // CONTRACT PENDING",
+                    "AIRLOCK LOCKED"
                 );
+
+                if (statusLight != null)
+                {
+                    statusLight.color = new Color(0.25f, 0.25f, 0.25f); // Dim Ash-Silver (Locked)
+                }
             }
         }
 
         private void HandleAirlockInteracted(GameObject player)
         {
+            bool isContractDone = DayCycleManager.Instance != null && DayCycleManager.Instance.IsDailyObjectiveCompleted;
+
+            if (requireContractCompletion && !isContractDone)
+            {
+                PlayLockedSound();
+
+                var hud = FindFirstObjectByType<AstronautHelmetHUD>();
+                if (hud != null)
+                {
+                    hud.ShowInteractionStatusMessage("AIRLOCK SEALED // COMPLETE CONTRACT OBJECTIVES BEFORE RETURN", 3.5f);
+                }
+                return;
+            }
+
             PlayAirlockSound();
 
             if (DayCycleManager.Instance != null)
@@ -176,6 +261,38 @@ namespace SpaceHorror.Gameplay
                 airlockAudioSource.pitch = UnityEngine.Random.Range(0.96f, 1.04f);
                 airlockAudioSource.PlayOneShot(activeCycleClip, 1.0f);
             }
+        }
+
+        public void PlayLockedSound()
+        {
+            if (airlockAudioSource != null && activeLockedClip != null)
+            {
+                airlockAudioSource.pitch = UnityEngine.Random.Range(0.96f, 1.04f);
+                airlockAudioSource.PlayOneShot(activeLockedClip, 0.85f);
+            }
+        }
+
+        private AudioClip GenerateProceduralDeniedBuzz()
+        {
+            int sampleRate = 44100;
+            float duration = 0.28f;
+            int samples = Mathf.CeilToInt(duration * sampleRate);
+            float[] data = new float[samples];
+
+            for (int i = 0; i < samples; i++)
+            {
+                float t = (float)i / sampleRate;
+                // Double pulse low buzz (130 Hz square wave)
+                float pulse = (t < 0.11f || (t > 0.15f && t < 0.26f)) ? 1f : 0f;
+                float wave = Mathf.Sign(Mathf.Sin(2f * Mathf.PI * 130f * t));
+                float env = pulse * (1f - (t % 0.13f) / 0.13f);
+
+                data[i] = wave * env * 0.45f;
+            }
+
+            AudioClip clip = AudioClip.Create("Procedural_AirlockDenied", samples, 1, sampleRate, false);
+            clip.SetData(data, 0);
+            return clip;
         }
 
         private AudioClip GenerateProceduralAirlockHiss()

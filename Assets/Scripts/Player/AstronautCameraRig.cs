@@ -123,6 +123,17 @@ namespace SpaceHorror.Player
             externalEulerOffset = offset;
         }
 
+        public Vector3 GetExternalEulerOffset()
+        {
+            return externalEulerOffset;
+        }
+
+        public Vector3 ExternalEulerOffset
+        {
+            get => externalEulerOffset;
+            set => externalEulerOffset = value;
+        }
+
         private void UpdateDynamicTiltAndBreathing()
         {
             // Calculate local velocity to determine strafe/heave/forward forces
